@@ -440,8 +440,11 @@ export default function MemberPortal() {
         <div className="hdr">
           <div className="hdr-top">
             <div>
-              <div className="brand-mark">URUZ ATHLETICS · LOYALTY</div>
-              <div className="member-name">{member.name}</div>
+<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+  <img src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" alt="URUZ" style={{height:32,width:"auto"}}/>
+  <img src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" alt="URUZ" style={{height:56,display:"block",margin:"0 auto 6px",width:"auto"}}/>
+</div>
+<div className="member-name">{member.name}</div>
               <div className="member-meta">Member since {new Date(member.joinDate).toLocaleDateString("en-GB",{month:"short",year:"numeric"})} · {member.id}</div>
             </div>
             <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
