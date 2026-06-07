@@ -304,39 +304,80 @@ function ActivitySlide({ transactions }) {
 }
 
 function SpotlightSlide({ members }) {
-  const top = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points)[0];
-  if(!top) return null;
+  const top3 = [...members]
+    .filter(m => m.status === "active")
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 3);
+
+  const medals = [
+    { rank:"#1", color:"#D4AF37", label:"Top Member" },
+    { rank:"#2", color:"#A8A9AD", label:"Runner Up" },
+    { rank:"#3", color:"#CD7F32", label:"Third Place" },
+  ];
+
   return (
     <div className="slide">
       <div className="slide-title">★ Member Spotlight</div>
-      <div className="spotlight-wrap">
-        <div style={{display:"flex",flexDirection:"column",gap:20}}>
-          <div style={{display:"flex",alignItems:"center",gap:20}}>
-            <div className="spotlight-av">{initials(top.name)}</div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, flex:1, alignItems:"center" }}>
+        {top3.map((m, i) => (
+          <div key={m.id} style={{
+            background:"#111",
+            border:`1px solid ${medals[i].color}44`,
+            padding:28,
+            textAlign:"center",
+            animation:`fadeUp 0.5s ease both`,
+            animationDelay:`${i*0.15}s`,
+            height:"100%",
+            display:"flex",
+            flexDirection:"column",
+            alignItems:"center",
+            justifyContent:"center",
+            gap:12,
+          }}>
+            <div style={{
+              fontFamily:"'Bebas Neue',sans-serif",
+              fontSize:48, color:medals[i].color,
+              lineHeight:1
+            }}>{medals[i].rank}</div>
+
+            <div style={{
+              width:72, height:72, borderRadius:2,
+              background:`${medals[i].color}22`,
+              border:`2px solid ${medals[i].color}`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontFamily:"'Bebas Neue',sans-serif",
+              fontSize:28, color:medals[i].color,
+            }}>{initials(m.name)}</div>
+
             <div>
-              <div className="spotlight-name">{top.name}</div>
-              <div className="spotlight-tier" style={{color:"#026F91"}}>★ Elite Member</div>
+              <div style={{
+                fontFamily:"'Bebas Neue',sans-serif",
+                fontSize:30, letterSpacing:2,
+                color:"#FFFDF3", lineHeight:1
+              }}>{m.name}</div>
+              <div style={{
+                fontFamily:"'Barlow Condensed',sans-serif",
+                fontSize:11, fontWeight:700,
+                letterSpacing:3, textTransform:"uppercase",
+                color:medals[i].color, marginTop:4
+              }}>{medals[i].label}</div>
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:2, width:"100%", marginTop:4 }}>
+              {[
+                { v:m.points.toLocaleString(), l:"Points" },
+                { v:`🔥 ${m.streak}d`,         l:"Streak" },
+                { v:m.checkins,                l:"Check-ins" },
+                { v:`${i+1}`,                  l:"Rank" },
+              ].map((s,j)=>(
+                <div key={j} style={{ background:"#1A1A1A", padding:"10px 8px", textAlign:"center" }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:medals[i].color, lineHeight:1 }}>{s.v}</div>
+                  <div style={{ fontSize:9, letterSpacing:2, textTransform:"uppercase", color:"#666058", marginTop:2, fontWeight:700 }}>{s.l}</div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="spotlight-quote">"Every rep, every step — you build it."</div>
-          <div>
-            <div style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#666058",marginBottom:4,fontWeight:700}}>Achievement</div>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:700,color:"#F58020",letterSpacing:1}}>Top earner this month — #{1} in the club</div>
-          </div>
-        </div>
-        <div className="sn-grid">
-          {[
-            {v:top.points.toLocaleString(),l:"Total Points"},
-            {v:"#1",                        l:"Club Rank"},
-            {v:`${top.streak}d`,            l:"Streak"},
-            {v:"★ Elite",                   l:"Tier"},
-          ].map((s,i)=>(
-            <div key={i} className="sn-cell" style={{animationDelay:`${0.1+i*0.07}s`}}>
-              <div className="sn-val">{s.v}</div>
-              <div className="sn-lbl">{s.l}</div>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   );
