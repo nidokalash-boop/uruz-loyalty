@@ -32,6 +32,7 @@ export async function upsertMember(member) {
     status:       member.status       || 'active',
     pin:          member.pin          || null,
     last_checkin: member.lastCheckin  || member.last_checkin || null,
+    birthday:     member.birthday     || null,
   }
   const { data } = await supabase.from('members').upsert(row).select().single()
   return data
