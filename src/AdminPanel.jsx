@@ -647,7 +647,10 @@ function DisplaySettings({toast}){
     </div>
 
     <div className="display-section">
-      <div className="display-section-title">Active Challenges</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <div className="display-section-title" style={{marginBottom:0}}>Active Challenges</div>
+        <button className="btn btn-primary btn-sm" onClick={()=>setSettings(s=>({...s,challenges:[...s.challenges,{id:Date.now(),name:"New Challenge",desc:"Description here",pts:100,deadline:"7 days",icon:"⚡",active:true,goal:1}]}))}>+ Add</button>
+      </div>
       <div style={{fontSize:12,color:C.muted,marginBottom:14}}>These show on the challenges slide and member portal.</div>
       {settings.challenges.map((c,i)=>(
         <div key={c.id} style={{background:C.card,border:`1px solid ${C.border}`,padding:14,marginBottom:10}}>
@@ -660,9 +663,13 @@ function DisplaySettings({toast}){
             <input className="form-input" placeholder="Description" value={c.desc} onChange={e=>updateChallenge(i,"desc",e.target.value)}/>
             <input className="form-input" type="number" placeholder="Pts" value={c.pts} onChange={e=>updateChallenge(i,"pts",e.target.value)} style={{width:80}}/>
           </div>
-          <div style={{display:"flex",gap:10}}>
+          <div style={{display:"flex",gap:10,marginTop:10}}>
             <input className="form-input" placeholder="Deadline (e.g. 3 days)" value={c.deadline} onChange={e=>updateChallenge(i,"deadline",e.target.value)}/>
             <input className="form-input" placeholder="Icon emoji" value={c.icon} onChange={e=>updateChallenge(i,"icon",e.target.value)} style={{width:80}}/>
+            <input className="form-input" type="number" placeholder="Goal #" value={c.goal||1} onChange={e=>updateChallenge(i,"goal",Number(e.target.value))} style={{width:80}}/>
+          </div>
+          <div style={{marginTop:8}}>
+            <button className="btn btn-danger btn-sm" onClick={()=>setSettings(s=>({...s,challenges:s.challenges.filter((_,j)=>j!==i)}))}>Remove Challenge</button>
           </div>
         </div>
       ))}
