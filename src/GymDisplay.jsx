@@ -129,7 +129,7 @@ html,body,#root{width:100%;height:100%;background:#080808;overflow:hidden;}
 
 /* ACTIVITY */
 .activity-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;flex:1;}
-.act-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);animation:fadeUp .4s ease both;animation-fill-mode:forwards;animation-iteration-count:1;}
+.act-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
 .act-row:last-child{border-bottom:none;}
 .act-icon-wrap{width:42px;height:42px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--s2);border:1px solid var(--border);}
 .act-who{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--text);line-height:1;}
@@ -247,7 +247,7 @@ const recent = [...transactions]
   const ACT_ICONS = {checkin:"📍",class:"💪",referral:"👥",bonus:"⭐",challenge:"🏆",manual:"✏",redeem:"🎟",deduct:"➖"};
   const half = Math.ceil(recent.length/2);
   const Row = ({a,i}) => (
-    <div className="act-row" style={{animationDelay:`${i*0.06}s`}}>
+   <div className="act-row">
       <div className="act-icon-wrap">{ACT_ICONS[a.type]||"📍"}</div>
       <div style={{flex:1}}>
         <div className="act-who">{a.memberName}</div>
