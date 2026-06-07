@@ -6,7 +6,8 @@ import {
   getRewards, upsertReward, deleteReward,
   getTiers, upsertTier,
   getStaff, upsertStaff, deleteStaff,
-  getDisplaySettings, saveDisplaySettings
+  getDisplaySettings, saveDisplaySettings,
+  getEnrollments, completeEnrollment
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');`;
@@ -44,8 +45,8 @@ const ROLES = {
 };
 
 const PERMISSIONS = {
-  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","settings"],
-  manager:    ["dashboard","members","award","redemptions","rewards","display"],
+  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","challenges","settings"],
+  manager:    ["dashboard","members","award","redemptions","rewards","display","challenges"],
   front_desk: ["dashboard","members","award","redemptions"],
   trainer:    ["dashboard","members","award"],
 };
@@ -711,6 +712,112 @@ function Settings({tiers,setTiers,toast}){
   </div>);
 }
 
+
+// ── CHALLENGES PANEL ─────────────────────────────────────
+function ChallengesPanel({members, setMembers, setTransactions, toast, displaySettings}) {
+  const [enrollments, setEnrollments] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    getEnrollments().then(data => { setEnrollments(data); setLoaded(true); });
+  }, []);
+
+  const challenges = displaySettings?.challenges
+    ? displaySettings.challenges.filter(c => c.active !== false)
+    : [];
+
+  const handleComplete = async (enrollment) => {
+    const pts = challenges.find(c => String(c.id) === enrollment.challengeId)?.pts || 0;
+    await completeEnrollment(enrollment.id, today());
+    setEnrollments(prev => prev.map(e => e.id === enrollment.id ? {...e, completed:true, completedDate:today()} : e));
+
+    if (pts > 0) {
+      const m = members.find(x => x.id === enrollment.memberId);
+      if (m) {
+        const newPoints = m.points + pts;
+        await upsertMember({...m, points: newPoints});
+        setMembers(prev => prev.map(x => x.id === m.id ? {...x, points: newPoints} : x));
+        const txn = { id: genId("TXN"), memberId: m.id, memberName: m.name, type: "challenge", pts, note: `Completed: ${enrollment.challengeName}`, date: today() };
+        await addTransaction(txn);
+        setTransactions(prev => [txn, ...prev]);
+      }
+    }
+    toast(`Challenge completed — ${pts > 0 ? `+${pts} pts awarded` : "no auto-points for this type"}`);
+  };
+
+  if (!loaded) return <div style={{color:C.muted, padding:20}}>Loading…</div>;
+
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div className="sec-title">Challenge Enrollments</div>
+        <div style={{fontSize:12,color:C.muted,fontWeight:500}}>{enrollments.length} total enrollments</div>
+      </div>
+
+      {challenges.length === 0 && (
+        <div className="empty">No active challenges. Add them in the TV Display settings.</div>
+      )}
+
+      {challenges.map(c => {
+        const cEnrollments = enrollments.filter(e => e.challengeId === String(c.id));
+        const pending = cEnrollments.filter(e => !e.completed);
+        const done = cEnrollments.filter(e => e.completed);
+        return (
+          <div key={c.id} style={{background:C.surface,border:`1px solid ${C.border}`,marginBottom:16}}>
+            <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:12}}>
+              <span style={{fontSize:20}}>{c.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:1,color:C.white}}>{c.name}</div>
+                <div style={{fontSize:12,color:C.muted}}>{c.desc}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.orange}}>+{c.pts} PTS</div>
+                <div style={{fontSize:11,color:C.muted}}>⏱ {c.deadline}</div>
+              </div>
+            </div>
+
+            {cEnrollments.length === 0 ? (
+              <div style={{padding:"14px 18px",color:C.muted,fontSize:13}}>No members enrolled yet.</div>
+            ) : (
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead>
+                  <tr>
+                    <th style={{padding:"8px 18px",textAlign:"left",fontSize:9,letterSpacing:2,textTransform:"uppercase",color:C.muted,fontWeight:700,background:C.card}}>Member</th>
+                    <th style={{padding:"8px 18px",textAlign:"left",fontSize:9,letterSpacing:2,textTransform:"uppercase",color:C.muted,fontWeight:700,background:C.card}}>Enrolled</th>
+                    <th style={{padding:"8px 18px",textAlign:"left",fontSize:9,letterSpacing:2,textTransform:"uppercase",color:C.muted,fontWeight:700,background:C.card}}>Status</th>
+                    <th style={{padding:"8px 18px",background:C.card}}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cEnrollments.map(e => (
+                    <tr key={e.id} style={{borderTop:`1px solid ${C.border}`}}>
+                      <td style={{padding:"10px 18px",fontWeight:600,fontSize:13}}>{e.memberName}</td>
+                      <td style={{padding:"10px 18px",fontSize:12,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{fmtDate(e.enrolledDate)}</td>
+                      <td style={{padding:"10px 18px"}}>
+                        {e.completed
+                          ? <span className="badge badge-fulfilled">✓ Completed</span>
+                          : <span className="badge badge-pending">In Progress</span>
+                        }
+                      </td>
+                      <td style={{padding:"10px 18px"}}>
+                        {!e.completed && (
+                          <button className="btn btn-success btn-sm" onClick={() => handleComplete(e)}>
+                            Mark Complete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── ROOT ──────────────────────────────────────────────────
 const ALL_NAV=[
   {id:"dashboard",  icon:"◉", label:"Dashboard"},
@@ -720,6 +827,7 @@ const ALL_NAV=[
   {id:"rewards",    icon:"⭐", label:"Rewards"},
   {id:"staff",      icon:"👥", label:"Staff"},
   {id:"display",    icon:"📺", label:"TV Display"},
+  {id:"challenges", icon:"⚔",  label:"Challenges"},
   {id:"settings",   icon:"⚙", label:"Settings"},
 ];
 
@@ -736,6 +844,8 @@ export default function AdminPanel(){
   const [loaded,setLoaded]             = useState(false);
   const [toast,showToast]              = useToast();
 
+  const [displaySettings, setDisplaySettings] = useState(null);
+
   useEffect(()=>{
     (async()=>{
       const sl=await getStaff();
@@ -746,10 +856,11 @@ export default function AdminPanel(){
         if(valid) setStaffSession(session);
         else clearStaffSession();
       }
-      const [m,t,r,rw,ti]=await Promise.all([getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers()]);
+      const [m,t,r,rw,ti,ds]=await Promise.all([getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings()]);
       setMembers(m.map(normalizeMember));setTxns(t);setRdms(r);
       setRewards(rw.length?rw:DEF_REWARDS);
       setTiers(ti.length?ti:DEF_TIERS);
+      if(ds){try{setDisplaySettings({...DEF_DISPLAY,...JSON.parse(ds.config||"{}")});}catch{}}
       setLoaded(true);
     })();
   },[]);
@@ -804,6 +915,7 @@ export default function AdminPanel(){
             {page==="rewards"    &&<RewardsCatalog rewards={rewards} setRewards={setRewards} toast={showToast}/>}
             {page==="staff"      &&<StaffManagement staffList={staffList} setStaffList={setStaffList} toast={showToast}/>}
             {page==="display"    &&<DisplaySettings toast={showToast}/>}
+            {page==="challenges" &&<ChallengesPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast} displaySettings={displaySettings}/>}
             {page==="settings"   &&<Settings tiers={tiers} setTiers={setTiers} toast={showToast}/>}
           </div>
         </div>
