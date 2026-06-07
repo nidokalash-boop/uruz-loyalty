@@ -74,6 +74,7 @@ function normalizeMember(m) {
     status:      m.status      || "active",
     pin:         m.pin         || null,
     lastCheckin: m.last_checkin|| m.lastCheckin || null,
+    birthday:    m.birthday    || null,
   };
 }
 
@@ -238,8 +239,9 @@ function LoginFlow({ onLogin }) {
   const [pin2,setPin2]         = useState("");
   const [error,setError]       = useState("");
   const [loading,setLoading]   = useState(false);
-  const [regName,setRegName]   = useState("");
-  const [regPhone,setRegPhone] = useState("");
+  const [regName,setRegName]       = useState("");
+  const [regPhone,setRegPhone]     = useState("");
+  const [regBirthday,setRegBirthday] = useState("");
 
   const handlePhone = async () => {
     setError(""); setLoading(true);
@@ -277,7 +279,7 @@ function LoginFlow({ onLogin }) {
     setLoading(true);
     const existing = await getMemberByPhone(regPhone);
     if(existing){setError("This number is already registered.");setLoading(false);return;}
-    const nm = { id:genId("URZ"), name:regName.trim(), phone:regPhone.trim(), email:"", joinDate:today(), points:0, checkins:0, streak:0, status:"active", pin:null };
+    const nm = { id:genId("URZ"), name:regName.trim(), phone:regPhone.trim(), email:"", joinDate:today(), points:0, checkins:0, streak:0, status:"active", pin:null, birthday:regBirthday||null };
     await upsertMember(nm);
     setLoading(false);
     setMember(nm); setPin(""); setStage("setpin");
@@ -343,6 +345,8 @@ function LoginFlow({ onLogin }) {
             <input className="inp" placeholder="e.g. Alex Rivera" value={regName} onChange={e=>setRegName(e.target.value)}/>
             <label className="lbl">Phone Number</label>
             <input className="inp" placeholder="+961 XX XXX XXX" value={regPhone} onChange={e=>setRegPhone(e.target.value)}/>
+            <label className="lbl">Birthday (optional)</label>
+            <input className="inp" type="date" value={regBirthday} onChange={e=>setRegBirthday(e.target.value)} style={{marginBottom:14}}/>
             {error&&<div className="err">{error}</div>}
             <button className="btn btn-primary" onClick={handleRegister} disabled={loading}>{loading?"Creating...":"Create Account"}</button>
             <button className="btn btn-ghost" onClick={()=>{setStage("phone");setError("");}}>Back to Sign In</button>
@@ -498,6 +502,34 @@ export default function MemberPortal() {
     const found = normalized.find(x=>x.id===mid);
     setMember(found||null);
     setLoaded(true);
+
+    // Auto-award birthday bonus if today is their birthday
+    if (found && found.birthday) {
+      const todayStr = new Date().toISOString().slice(5,10); // MM-DD
+      const bday = found.birthday.slice(5,10); // MM-DD from YYYY-MM-DD
+      const lastBdayKey = `uruz:bday:${found.id}:${new Date().getFullYear()}`;
+      const alreadyAwarded = localStorage.getItem(lastBdayKey);
+      if (todayStr === bday && !alreadyAwarded) {
+        const BDAY_PTS = 300;
+        const newPoints = found.points + BDAY_PTS;
+        await upsertMember({...found, points: newPoints});
+        const txn = {
+          id: genId("TXN"),
+          memberId: found.id,
+          memberName: found.name,
+          type: "bonus",
+          pts: BDAY_PTS,
+          note: "🎂 Birthday Bonus!",
+          date: today()
+        };
+        await addTransaction(txn);
+        localStorage.setItem(lastBdayKey, "1");
+        // Update member in state
+        const updatedMembers = normalized.map(x => x.id===found.id ? {...x,points:newPoints} : x);
+        setMembers(updatedMembers);
+        setMember({...found, points: newPoints});
+      }
+    }
   };
 
   useEffect(()=>{
