@@ -176,3 +176,15 @@ export async function completeEnrollment(id, completedDate) {
     completed_date: completedDate,
   }).eq('id', id)
 }
+
+// ── EARN RULES ───────────────────────────────────────────
+export async function getEarnRules() {
+  const { data } = await supabase.from('earn_rules').select('*').order('sort_order', { ascending: true })
+  return data || []
+}
+export async function upsertEarnRule(rule) {
+  await supabase.from('earn_rules').upsert(rule)
+}
+export async function deleteEarnRule(id) {
+  await supabase.from('earn_rules').delete().eq('id', id)
+}
