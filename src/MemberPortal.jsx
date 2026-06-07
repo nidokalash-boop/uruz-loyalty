@@ -441,11 +441,6 @@ export default function MemberPortal() {
           <div className="hdr-top">
             <div>
 <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-  <img 
-    src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" 
-    alt="URUZ" 
-    style={{height:44,width:"auto",flexShrink:0}}
-  />
   <div className="brand-mark">URUZ ATHLETICS · LOYALTY</div>
 </div>
 <div className="member-name">{member.name}</div>
