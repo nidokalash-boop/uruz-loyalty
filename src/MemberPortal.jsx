@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
+import {
+  getMembers, getMemberByPhone, getMemberById, upsertMember,
+  updateMemberPin, getTransactions, addTransaction,
+  getRedemptions, addRedemption, getRewards, getTiers
+} from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&display=swap');`;
-const C = {
-  orange:"#F58020", cerulean:"#026F91", white:"#FFFDF3", black:"#1F2020",
-  surface:"#252627", card:"#2A2B2C", border:"#333435", muted:"#6B6866",
-  success:"#22C55E", danger:"#EF4444",
-  gold:"#D4AF37", silver:"#A8A9AD", bronze:"#CD7F32",
-};
+
 const DEF_TIERS = [
   { id:"t1", name:"Iron",   min:0,     color:"#6B7280", icon:"⚙" },
   { id:"t2", name:"Bronze", min:1000,  color:"#CD7F32", icon:"🔶" },
@@ -25,14 +25,14 @@ const DEF_REWARDS = [
   { id:"RWD-008", name:"Nutrition Consult",      pts:800,  cat:"Training", icon:"🥗", stock:true  },
 ];
 const HOW_TO_EARN = [
-  { icon:"📍", action:"Daily Check-in",             pts:50,   note:"Scan the QR code at the entrance" },
-  { icon:"🧑‍🏫", action:"Group Class Attendance",    pts:75,   note:"Per class" },
-  { icon:"💪", action:"Personal Training Session",   pts:100,  note:"Per session" },
-  { icon:"👥", action:"Refer a Friend",              pts:500,  note:"When they join" },
-  { icon:"🛒", action:"In-Gym Purchase",             pts:"3%", note:"Of spend" },
-  { icon:"🔥", action:"7-Day Streak Bonus",          pts:100,  note:"Auto-awarded" },
-  { icon:"📅", action:"30-Day Streak Bonus",         pts:400,  note:"Auto-awarded" },
-  { icon:"🎂", action:"Birthday Bonus",              pts:300,  note:"Once a year" },
+  { icon:"📍", action:"Daily Check-in",            pts:50,   note:"Scan the QR code at the entrance" },
+  { icon:"🧑‍🏫", action:"Group Class Attendance",   pts:75,   note:"Per class" },
+  { icon:"💪", action:"Personal Training Session",  pts:100,  note:"Per session" },
+  { icon:"👥", action:"Refer a Friend",             pts:500,  note:"When they join" },
+  { icon:"🛒", action:"In-Gym Purchase",            pts:"3%", note:"Of spend" },
+  { icon:"🔥", action:"7-Day Streak Bonus",         pts:100,  note:"Auto-awarded" },
+  { icon:"📅", action:"30-Day Streak Bonus",        pts:400,  note:"Auto-awarded" },
+  { icon:"🎂", action:"Birthday Bonus",             pts:300,  note:"Once a year" },
 ];
 const DEF_CHALLENGES = [
   { id:1, name:"Weekly Warrior",  desc:"Check in 5x this week",          pts:150,  progress:3,  goal:5,  deadline:"3 days left",  icon:"⚔" },
@@ -41,56 +41,45 @@ const DEF_CHALLENGES = [
   { id:4, name:"Iron Will",       desc:"15-day consecutive streak",     pts:300,  progress:11, goal:15, deadline:"4 days left",  icon:"🔥" },
 ];
 
-async function sload(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-async function ssave(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-}
-
-// Normalize member — fills in any missing fields so the portal never crashes
-function normalizeMember(m) {
-  return {
-    id:         m.id         || "URZ-00000",
-    name:       m.name       || "Member",
-    phone:      m.phone      || "",
-    email:      m.email      || "",
-    joinDate:   m.joinDate   || new Date().toISOString().slice(0,10),
-    points:     m.points     ?? 0,
-    checkins:   m.checkins   ?? 0,
-    streak:     m.streak     ?? 0,
-    status:     m.status     || "active",
-    pin:        m.pin        || null,
-    lastCheckin:m.lastCheckin|| null,
-  };
-}
 function getSession() {
-  try { const v = localStorage.getItem("uruz:session"); return v ? JSON.parse(v) : null; }
-  catch { return null; }
+  try { const v = localStorage.getItem("uruz:session"); return v ? JSON.parse(v) : null; } catch { return null; }
 }
 function saveSession(data) { try { localStorage.setItem("uruz:session", JSON.stringify(data)); } catch {} }
 function clearSession()    { try { localStorage.removeItem("uruz:session"); } catch {} }
+
+function normalizeMember(m) {
+  return {
+    id:          m.id          || "URZ-00000",
+    name:        m.name        || "Member",
+    phone:       m.phone       || "",
+    email:       m.email       || "",
+    joinDate:    m.join_date   || m.joinDate || new Date().toISOString().slice(0,10),
+    points:      m.points      ?? 0,
+    checkins:    m.checkins    ?? 0,
+    streak:      m.streak      ?? 0,
+    status:      m.status      || "active",
+    pin:         m.pin         || null,
+    lastCheckin: m.last_checkin|| m.lastCheckin || null,
+  };
+}
 
 function getTier(pts, tiers) { return [...tiers].sort((a,b)=>b.min-a.min).find(t=>pts>=t.min)||tiers[0]; }
 function getNext(pts, tiers) { const s=[...tiers].sort((a,b)=>a.min-b.min); const cur=s.filter(t=>pts>=t.min).pop(); const i=s.indexOf(cur); return i<s.length-1?s[i+1]:null; }
 function genId(p) { return `${p}-${Math.floor(10000+Math.random()*90000)}`; }
 function today() { return new Date().toISOString().slice(0,10); }
-function fmtDate(d) { return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }
-function initials(n) { return n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
+function fmtDate(d) { try { return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short"}); } catch { return d; } }
+function initials(n) { return (n||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
 
 const CSS = `
 ${FONTS}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;}
 .app{min-height:100vh;background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;max-width:920px;margin:0 auto;padding-bottom:60px;}
-.app::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:0.6;}
-
 .screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;}
 .screen::before{content:'URUZ';position:fixed;right:-30px;bottom:-20px;font-family:'Bebas Neue',sans-serif;font-size:200px;letter-spacing:8px;color:rgba(245,128,32,0.04);pointer-events:none;user-select:none;line-height:1;}
 .box{width:100%;max-width:380px;background:#252627;border:1px solid #333435;padding:36px 28px;}
 .brand{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:5px;color:#F58020;text-align:center;line-height:1;}
-.brand-sub{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#6B6866;text-align:center;margin-top:3px;font-weight:700;}
+.brand-sub{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#6B6866;text-align:center;margin-top:3px;font-weight:700;margin-bottom:0;}
 .divider{height:1px;background:#333435;margin:24px 0;}
 .step-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:#FFFDF3;margin-bottom:6px;text-align:center;}
 .step-sub{font-size:12px;color:#6B6866;text-align:center;margin-bottom:20px;font-weight:500;line-height:1.6;}
@@ -108,8 +97,6 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .err{font-size:12px;color:#EF4444;text-align:center;margin-bottom:12px;font-weight:500;}
 .hint{font-size:11px;color:#6B6866;text-align:center;line-height:1.6;margin-top:8px;}
 .link{color:#F58020;cursor:pointer;font-weight:700;}
-.link:hover{text-decoration:underline;}
-
 .pin-row{display:flex;gap:10px;justify-content:center;margin-bottom:20px;}
 .pin-digit{width:52px;height:64px;background:#2A2B2C;border:1px solid #333435;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:32px;color:#F58020;transition:border-color .15s;}
 .pin-digit.filled{border-color:#F58020;}
@@ -122,7 +109,6 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .pin-key.empty{background:transparent;border-color:transparent;pointer-events:none;}
 .member-chip{display:flex;align-items:center;gap:12px;background:#2A2B2C;border:1px solid #333435;padding:12px 14px;margin-bottom:20px;}
 .chip-av{width:36px;height:36px;background:rgba(245,128,32,.15);border:1px solid rgba(245,128,32,.3);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:800;color:#F58020;flex-shrink:0;}
-
 .hdr{background:linear-gradient(135deg,#1a1208 0%,#1F2020 65%);border-bottom:1px solid #333435;padding:28px 24px 0;position:relative;overflow:hidden;}
 .hdr::after{content:'URUZ';position:absolute;right:-16px;top:-8px;font-family:'Bebas Neue',sans-serif;font-size:130px;letter-spacing:8px;color:rgba(245,128,32,.05);pointer-events:none;user-select:none;}
 .hdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;}
@@ -145,7 +131,6 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .nav-btn{flex:1;padding:14px 4px;background:none;border:none;color:#6B6866;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:color .2s;position:relative;text-align:center;}
 .nav-btn.on{color:#F58020;}
 .nav-btn.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#F58020;}
-.nav-btn:hover:not(.on){color:#FFFDF3;}
 .content{padding:24px;animation:up .35s ease both;}
 @keyframes up{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .sec-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#6B6866;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
@@ -157,9 +142,9 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .act-date{font-size:11px;color:#6B6866;margin-top:2px;}
 .act-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;}
 .rewards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:14px;}
-.rwd-card{background:#2A2B2C;border:1px solid #333435;padding:18px 16px;position:relative;transition:border-color .2s,transform .2s;cursor:pointer;}
+.rwd-card{background:#2A2B2C;border:1px solid #333435;padding:18px 16px;position:relative;transition:border-color .2s,transform .2s;}
 .rwd-card:hover:not(.oos){border-color:#F58020;transform:translateY(-2px);}
-.rwd-card.oos{opacity:.42;cursor:not-allowed;}
+.rwd-card.oos{opacity:.42;}
 .rwd-icon{font-size:28px;margin-bottom:10px;display:block;}
 .rwd-cat{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#6B6866;margin-bottom:6px;font-weight:700;}
 .rwd-name{font-size:15px;font-weight:700;color:#FFFDF3;line-height:1.25;margin-bottom:12px;}
@@ -173,8 +158,7 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
 .pill{padding:5px 14px;border:1px solid #333435;background:none;color:#6B6866;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
 .pill.on,.pill:hover{border-color:#F58020;color:#F58020;background:rgba(245,128,32,.08);}
-.ch-card{background:#2A2B2C;border:1px solid #333435;padding:18px;margin-bottom:12px;transition:border-color .2s;}
-.ch-card:hover{border-color:rgba(245,128,32,.4);}
+.ch-card{background:#2A2B2C;border:1px solid #333435;padding:18px;margin-bottom:12px;}
 .ch-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
 .ch-icon-w{width:42px;height:42px;background:rgba(245,128,32,.1);border:1px solid rgba(245,128,32,.28);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
 .ch-name{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#FFFDF3;line-height:1;margin-bottom:4px;letter-spacing:1px;}
@@ -215,7 +199,6 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .rdm-pending-item:last-child{border-bottom:none;}
 .toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);background:#F58020;color:#fff;padding:12px 28px;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;z-index:1000;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
-.topbar-actions{display:flex;align-items:center;gap:8px;}
 .icon-btn{background:none;border:1px solid #333435;color:#6B6866;padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:'Montserrat',sans-serif;transition:all .15s;}
 .icon-btn:hover{border-color:#F58020;color:#F58020;}
 ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:#1F2020;}::-webkit-scrollbar-thumb{background:#333435;}
@@ -223,47 +206,37 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 
 function PinInput({ value, onChange, label }) {
   const keys = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
-  const handleKey = k => {
-    if (k==="⌫") onChange(value.slice(0,-1));
-    else if (k==="" ) return;
-    else if (value.length<4) onChange(value+k);
-  };
+  const handle = k => { if(k==="⌫") onChange(value.slice(0,-1)); else if(k==="") return; else if(value.length<4) onChange(value+k); };
   return (
     <div>
       {label && <div className="step-sub">{label}</div>}
       <div className="pin-row">
-        {[0,1,2,3].map(i=>(
-          <div key={i} className={`pin-digit${value[i]?" filled":""}${value.length===i?" active":""}`}>
-            {value[i]?"●":""}
-          </div>
-        ))}
+        {[0,1,2,3].map(i=><div key={i} className={`pin-digit${value[i]?" filled":""}${value.length===i?" active":""}`}>{value[i]?"●":""}</div>)}
       </div>
       <div className="pin-pad">
-        {keys.map((k,i)=>(
-          <div key={i} className={`pin-key${k==="⌫"?" del":""}${k===""?" empty":""}`} onClick={()=>handleKey(k)}>{k}</div>
-        ))}
+        {keys.map((k,i)=><div key={i} className={`pin-key${k==="⌫"?" del":""}${k===""?" empty":""}`} onClick={()=>handle(k)}>{k}</div>)}
       </div>
     </div>
   );
 }
 
 function LoginFlow({ onLogin }) {
-  const [stage, setStage]     = useState("phone");
-  const [phone, setPhone]     = useState("");
-  const [member, setMember]   = useState(null);
-  const [pin, setPin]         = useState("");
-  const [pin2, setPin2]       = useState("");
-  const [error, setError]     = useState("");
-  const [regName, setRegName] = useState("");
-  const [regPhone, setRegPhone] = useState("");
+  const [stage,setStage]     = useState("phone");
+  const [phone,setPhone]     = useState("");
+  const [member,setMember]   = useState(null);
+  const [pin,setPin]         = useState("");
+  const [pin2,setPin2]       = useState("");
+  const [error,setError]     = useState("");
+  const [loading,setLoading] = useState(false);
+  const [regName,setRegName] = useState("");
+  const [regPhone,setRegPhone] = useState("");
 
   const handlePhone = async () => {
-    setError("");
-    const members = await sload("uruz:members", []);
-    const clean = s=>s.replace(/\s+/g,"");
-    const m = members.find(x=>clean(x.phone)===clean(phone)&&x.status==="active");
+    setError(""); setLoading(true);
+    const m = await getMemberByPhone(phone);
+    setLoading(false);
     if (!m) { setError("No active member found. Register below or ask the front desk."); return; }
-    setMember(m);
+    setMember(normalizeMember(m));
     setStage(m.pin ? "pin" : "setpin");
   };
 
@@ -274,112 +247,91 @@ function LoginFlow({ onLogin }) {
     onLogin(member.id);
   };
 
-  useEffect(() => { if (stage==="pin" && pin.length===4) handlePin(); }, [pin, stage]);
+  useEffect(() => { if(stage==="pin" && pin.length===4) handlePin(); }, [pin, stage]);
 
-  const handleSetPin = () => {
-    if (pin.length<4) { setError("Enter all 4 digits."); return; }
-    setPin2(""); setError(""); setStage("confirmpin");
-  };
+  const handleSetPin = () => { if(pin.length<4){setError("Enter all 4 digits.");return;} setPin2("");setError("");setStage("confirmpin"); };
 
   const handleConfirmPin = async () => {
-    if (pin2 !== pin) { setError("PINs don't match. Try again."); setPin2(""); return; }
-    const members = await sload("uruz:members", []);
-    const updated = members.map(m=>m.id===member.id?{...m,pin}:m);
-    await ssave("uruz:members", updated);
+    if(pin2!==pin){setError("PINs don't match. Try again.");setPin2("");return;}
+    await updateMemberPin(member.id, pin);
     saveSession({ memberId: member.id });
     onLogin(member.id);
   };
 
-  useEffect(() => { if (stage==="confirmpin" && pin2.length===4) handleConfirmPin(); }, [pin2, stage]);
+  useEffect(() => { if(stage==="confirmpin" && pin2.length===4) handleConfirmPin(); }, [pin2, stage]);
 
   const handleRegister = async () => {
     setError("");
-    if (!regName.trim()||!regPhone.trim()) { setError("Please fill in all fields."); return; }
-    const members = await sload("uruz:members", []);
-    const clean = s=>s.replace(/\s+/g,"");
-    if (members.find(m=>clean(m.phone)===clean(regPhone))) { setError("This number is already registered."); return; }
+    if(!regName.trim()||!regPhone.trim()){setError("Please fill in all fields.");return;}
+    setLoading(true);
+    const existing = await getMemberByPhone(regPhone);
+    if(existing){setError("This number is already registered.");setLoading(false);return;}
     const nm = {
       id:genId("URZ"), name:regName.trim(), phone:regPhone.trim(), email:"",
       joinDate:today(), points:0, checkins:0, streak:0, status:"active", pin:null
     };
-    await ssave("uruz:members", [...members, nm]);
-    setMember(nm);
-    setPin(""); setStage("setpin");
+    await upsertMember(nm);
+    setLoading(false);
+    setMember(nm); setPin(""); setStage("setpin");
   };
 
   return (
     <>
       <style>{CSS}</style>
       <div className="screen">
-        {stage==="phone" && (
+        {stage==="phone"&&(
           <div className="box">
             <div className="brand">URUZ</div>
             <div className="brand-sub">Loyalty Program</div>
             <div className="divider"/>
             <div className="step-title">Welcome Back</div>
             <label className="lbl">Your Phone Number</label>
-            <input className="inp" placeholder="+961 XX XXX XXX" value={phone}
-              onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handlePhone()}/>
-            {error && <div className="err">{error}</div>}
-            <button className="btn btn-primary" onClick={handlePhone}>Sign In</button>
-            <div className="hint">Not a member yet? <span className="link" onClick={()=>{setError("");setStage("register");}}>Register here</span></div>
+            <input className="inp" placeholder="+961 XX XXX XXX" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handlePhone()}/>
+            {error&&<div className="err">{error}</div>}
+            <button className="btn btn-primary" onClick={handlePhone} disabled={loading}>{loading?"Checking...":"Sign In"}</button>
+            <div className="hint">Not a member? <span className="link" onClick={()=>{setError("");setStage("register");}}>Register here</span></div>
           </div>
         )}
-
-        {stage==="pin" && member && (
+        {stage==="pin"&&member&&(
           <div className="box">
-            <div className="brand">URUZ</div>
-            <div className="brand-sub">Loyalty Program</div>
-            <div className="divider"/>
+            <div className="brand">URUZ</div><div className="brand-sub">Loyalty Program</div><div className="divider"/>
             <div className="member-chip">
               <div className="chip-av">{initials(member.name)}</div>
-              <div>
-                <div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div>
-                <div style={{fontSize:11,color:"#6B6866"}}>{member.phone}</div>
-              </div>
+              <div><div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div><div style={{fontSize:11,color:"#6B6866"}}>{member.phone}</div></div>
             </div>
             <PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Enter your 4-digit PIN"/>
-            {error && <div className="err">{error}</div>}
+            {error&&<div className="err">{error}</div>}
             <button className="btn btn-ghost" style={{marginTop:8}} onClick={()=>{setStage("phone");setPin("");setMember(null);}}>Back</button>
           </div>
         )}
-
-        {stage==="setpin" && member && (
+        {stage==="setpin"&&member&&(
           <div className="box">
-            <div className="brand">URUZ</div>
-            <div className="brand-sub">Set Up Your PIN</div>
-            <div className="divider"/>
+            <div className="brand">URUZ</div><div className="brand-sub">Set Up Your PIN</div><div className="divider"/>
             <div className="step-title">Create Your PIN</div>
             <PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Choose a 4-digit PIN to secure your account"/>
-            {error && <div className="err">{error}</div>}
+            {error&&<div className="err">{error}</div>}
             <button className="btn btn-primary" onClick={handleSetPin} disabled={pin.length<4}>Continue</button>
           </div>
         )}
-
-        {stage==="confirmpin" && (
+        {stage==="confirmpin"&&(
           <div className="box">
-            <div className="brand">URUZ</div>
-            <div className="brand-sub">Confirm Your PIN</div>
-            <div className="divider"/>
+            <div className="brand">URUZ</div><div className="brand-sub">Confirm Your PIN</div><div className="divider"/>
             <div className="step-title">Confirm PIN</div>
             <PinInput value={pin2} onChange={v=>{setPin2(v);setError("");}} label="Enter your PIN again to confirm"/>
-            {error && <div className="err">{error}</div>}
+            {error&&<div className="err">{error}</div>}
           </div>
         )}
-
-        {stage==="register" && (
+        {stage==="register"&&(
           <div className="box">
-            <div className="brand">URUZ</div>
-            <div className="brand-sub">Join the Movement</div>
-            <div className="divider"/>
+            <div className="brand">URUZ</div><div className="brand-sub">Join the Movement</div><div className="divider"/>
             <div className="step-title">New Member</div>
             <div className="step-sub">Register to start earning points from day one</div>
             <label className="lbl">Full Name</label>
             <input className="inp" placeholder="e.g. Alex Rivera" value={regName} onChange={e=>setRegName(e.target.value)}/>
             <label className="lbl">Phone Number</label>
             <input className="inp" placeholder="+961 XX XXX XXX" value={regPhone} onChange={e=>setRegPhone(e.target.value)}/>
-            {error && <div className="err">{error}</div>}
-            <button className="btn btn-primary" onClick={handleRegister}>Create Account</button>
+            {error&&<div className="err">{error}</div>}
+            <button className="btn btn-primary" onClick={handleRegister} disabled={loading}>{loading?"Creating...":"Create Account"}</button>
             <button className="btn btn-ghost" onClick={()=>{setStage("phone");setError("");}}>Back to Sign In</button>
           </div>
         )}
@@ -390,48 +342,14 @@ function LoginFlow({ onLogin }) {
 
 function ActivityTab({ transactions, memberId }) {
   const cfg={checkin:{e:"📍",bg:"rgba(2,111,145,.15)",c:"#4DBBD5"},challenge:{e:"🏆",bg:"rgba(212,175,55,.15)",c:"#D4AF37"},referral:{e:"👥",bg:"rgba(34,197,94,.15)",c:"#22C55E"},purchase:{e:"🛒",bg:"rgba(168,85,247,.15)",c:"#A855F7"},redeem:{e:"🎟",bg:"rgba(239,68,68,.15)",c:"#EF4444"},class:{e:"💪",bg:"rgba(245,128,32,.15)",c:"#F58020"},bonus:{e:"⭐",bg:"rgba(212,175,55,.15)",c:"#D4AF37"},manual:{e:"✏",bg:"rgba(168,85,247,.15)",c:"#A855F7"},deduct:{e:"➖",bg:"rgba(239,68,68,.15)",c:"#EF4444"}};
-  const myTxns=transactions.filter(t=>t.memberId===memberId).slice(0,15);
+  const myTxns=transactions.filter(t=>t.memberId===memberId||t.member_id===memberId).slice(0,15);
   if(!myTxns.length) return <div style={{color:"#6B6866",fontSize:13,padding:"20px 0"}}>No activity yet. Check in today to start earning!</div>;
-  return (
-    <div>
-      <div className="sec-label">Your Activity</div>
-      {myTxns.map(a=>{const k=cfg[a.type]||cfg.checkin;return(
-        <div key={a.id} className="act-row">
-          <div className="act-icon" style={{background:k.bg}}>{k.e}</div>
-          <div style={{flex:1}}><div className="act-label">{a.note}</div><div className="act-date">{fmtDate(a.date)}</div></div>
-          <div className="act-pts" style={{color:a.pts>0?"#22C55E":"#EF4444"}}>{a.pts>0?"+":""}{a.pts}</div>
-        </div>
-      );})}
-    </div>
-  );
+  return (<div><div className="sec-label">Your Activity</div>{myTxns.map(a=>{const k=cfg[a.type]||cfg.checkin;return(<div key={a.id} className="act-row"><div className="act-icon" style={{background:k.bg}}>{k.e}</div><div style={{flex:1}}><div className="act-label">{a.note}</div><div className="act-date">{fmtDate(a.date)}</div></div><div className="act-pts" style={{color:a.pts>0?"#22C55E":"#EF4444"}}>{a.pts>0?"+":""}{a.pts}</div></div>);})}</div>);
 }
 
 function EarnTab({ tiers, memberPts }) {
   const cur=getTier(memberPts,tiers);
-  return (
-    <div>
-      <div className="sec-label">Tier Path</div>
-      <div className="tier-ladder">
-        {[...tiers].sort((a,b)=>a.min-b.min).map(t=>(
-          <div key={t.id} className={`tier-rung${t.name===cur.name?" cur":""}`}>
-            <span className="tier-rung-icon">{t.icon}</span>
-            <div className="tier-rung-name" style={{color:t.color}}>{t.name}</div>
-            <div className="tier-rung-min">{t.min.toLocaleString()}+</div>
-          </div>
-        ))}
-      </div>
-      <div className="sec-label">Ways to Earn</div>
-      <table className="earn-tbl"><tbody>
-        {HOW_TO_EARN.map((e,i)=>(
-          <tr key={i}>
-            <td style={{width:38,textAlign:"center",fontSize:20}}>{e.icon}</td>
-            <td><div className="earn-action">{e.action}</div><div className="earn-note">{e.note}</div></td>
-            <td className="earn-pts">{typeof e.pts==="number"?`+${e.pts}`:e.pts} <span style={{fontSize:11,color:"#6B6866"}}>PTS</span></td>
-          </tr>
-        ))}
-      </tbody></table>
-    </div>
-  );
+  return (<div><div className="sec-label">Tier Path</div><div className="tier-ladder">{[...tiers].sort((a,b)=>a.min-b.min).map(t=>(<div key={t.id} className={`tier-rung${t.name===cur.name?" cur":""}`}><span className="tier-rung-icon">{t.icon}</span><div className="tier-rung-name" style={{color:t.color}}>{t.name}</div><div className="tier-rung-min">{t.min.toLocaleString()}+</div></div>))}</div><div className="sec-label">Ways to Earn</div><table className="earn-tbl"><tbody>{HOW_TO_EARN.map((e,i)=>(<tr key={i}><td style={{width:38,textAlign:"center",fontSize:20}}>{e.icon}</td><td><div className="earn-action">{e.action}</div><div className="earn-note">{e.note}</div></td><td className="earn-pts">{typeof e.pts==="number"?`+${e.pts}`:e.pts} <span style={{fontSize:11,color:"#6B6866"}}>PTS</span></td></tr>))}</tbody></table></div>);
 }
 
 function RewardsTab({ rewards, memberPts, myRedemptions, onRequest }) {
@@ -439,88 +357,19 @@ function RewardsTab({ rewards, memberPts, myRedemptions, onRequest }) {
   const cats=["All","Access","Merch","Training"];
   const list=filter==="All"?rewards:rewards.filter(r=>r.cat===filter);
   const pendingNames=myRedemptions.filter(r=>r.status==="pending").map(r=>r.reward);
-  return (
-    <div>
-      <div style={{marginBottom:18}}>
-        <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",marginBottom:4,fontWeight:600}}>Your Balance</div>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:38,color:"#F58020",lineHeight:1}}>{memberPts.toLocaleString()} <span style={{fontSize:16,color:"#6B6866"}}>PTS</span></div>
-      </div>
-      {myRedemptions.filter(r=>r.status==="pending").length>0&&(
-        <div className="rdm-pending">
-          <div className="rdm-pending-title">⏳ Pending Redemptions</div>
-          {myRedemptions.filter(r=>r.status==="pending").map(r=>(
-            <div key={r.id} className="rdm-pending-item">
-              <span style={{fontSize:13,fontWeight:500}}>{r.reward}</span>
-              <span style={{fontSize:11,color:"#026F91",fontWeight:700}}>See front desk</span>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="pills">{cats.map(c=><button key={c} className={`pill${filter===c?" on":""}`} onClick={()=>setFilter(c)}>{c}</button>)}</div>
-      <div className="rewards-grid">
-        {list.map(r=>{const ip=pendingNames.includes(r.name);return(
-          <div key={r.id} className={`rwd-card${!r.stock?" oos":""}`}>
-            {!r.stock&&<span className="oos-tag">Sold Out</span>}
-            <span className="rwd-icon">{r.icon}</span>
-            <div className="rwd-cat">{r.cat}</div>
-            <div className="rwd-name">{r.name}</div>
-            <div className="rwd-footer">
-              <div className="rwd-cost">{r.pts.toLocaleString()}</div>
-              <button className={`rdm-btn${ip?" pending-btn":""}`} disabled={(!ip&&memberPts<r.pts)||!r.stock} onClick={()=>!ip&&onRequest(r)}>
-                {ip?"Requested":memberPts<r.pts?"Need more":"Request"}
-              </button>
-            </div>
-          </div>
-        );})}
-      </div>
-    </div>
-  );
+  return (<div><div style={{marginBottom:18}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",marginBottom:4,fontWeight:600}}>Your Balance</div><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:38,color:"#F58020",lineHeight:1}}>{memberPts.toLocaleString()} <span style={{fontSize:16,color:"#6B6866"}}>PTS</span></div></div>{myRedemptions.filter(r=>r.status==="pending").length>0&&(<div className="rdm-pending"><div className="rdm-pending-title">⏳ Pending Redemptions</div>{myRedemptions.filter(r=>r.status==="pending").map(r=>(<div key={r.id} className="rdm-pending-item"><span style={{fontSize:13,fontWeight:500}}>{r.reward}</span><span style={{fontSize:11,color:"#026F91",fontWeight:700}}>See front desk</span></div>))}</div>)}<div className="pills">{cats.map(c=><button key={c} className={`pill${filter===c?" on":""}`} onClick={()=>setFilter(c)}>{c}</button>)}</div><div className="rewards-grid">{list.map(r=>{const ip=pendingNames.includes(r.name);return(<div key={r.id} className={`rwd-card${!r.stock?" oos":""}`}>{!r.stock&&<span className="oos-tag">Sold Out</span>}<span className="rwd-icon">{r.icon}</span><div className="rwd-cat">{r.cat}</div><div className="rwd-name">{r.name}</div><div className="rwd-footer"><div className="rwd-cost">{r.pts.toLocaleString()}</div><button className={`rdm-btn${ip?" pending-btn":""}`} disabled={(!ip&&memberPts<r.pts)||!r.stock} onClick={()=>!ip&&onRequest(r)}>{ip?"Requested":memberPts<r.pts?"Need more":"Request"}</button></div></div>);})}</div></div>);
 }
 
 function ChallengesTab() {
-  return (
-    <div>
-      <div className="sec-label">Active Challenges</div>
-      {DEF_CHALLENGES.map(c=>{const pct=Math.round((c.progress/c.goal)*100);return(
-        <div key={c.id} className="ch-card">
-          <div className="ch-top"><div className="ch-icon-w">{c.icon}</div><div><div className="ch-name">{c.name}</div><div className="ch-desc">{c.desc}</div></div></div>
-          <div className="ch-meta"><span className="ch-dl">⏱ {c.deadline}</span><span className="ch-rew">+{c.pts} PTS</span></div>
-          <div className="ch-track"><div className="ch-fill" style={{width:`${pct}%`}}/></div>
-          <div className="ch-bar-lbl"><span>{c.progress}/{c.goal} complete</span><span style={{color:pct===100?"#22C55E":"#6B6866"}}>{pct}%</span></div>
-        </div>
-      );})}
-    </div>
-  );
+  return (<div><div className="sec-label">Active Challenges</div>{DEF_CHALLENGES.map(c=>{const pct=Math.round((c.progress/c.goal)*100);return(<div key={c.id} className="ch-card"><div className="ch-top"><div className="ch-icon-w">{c.icon}</div><div><div className="ch-name">{c.name}</div><div className="ch-desc">{c.desc}</div></div></div><div className="ch-meta"><span className="ch-dl">⏱ {c.deadline}</span><span className="ch-rew">+{c.pts} PTS</span></div><div className="ch-track"><div className="ch-fill" style={{width:`${pct}%`}}/></div><div className="ch-bar-lbl"><span>{c.progress}/{c.goal} complete</span><span style={{color:pct===100?"#22C55E":"#6B6866"}}>{pct}%</span></div></div>);})}</div>);
 }
 
-function LeaderboardTab({ members, memberId, tiers }) {
+function LeaderboardTab({ members, memberId }) {
   const sorted=[...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points);
   const top10=sorted.slice(0,10);
   const meIdx=sorted.findIndex(m=>m.id===memberId);
   const me=sorted[meIdx];
-  const showMe=me&&meIdx>=10;
-  return (
-    <div>
-      <div className="sec-label">This Month's Rankings</div>
-      {top10.map((m,i)=>{const rank=i+1;const av=rank===1?{background:"rgba(212,175,55,.22)",color:"#D4AF37",border:"1px solid rgba(212,175,55,.55)"}:rank===2?{background:"rgba(168,169,173,.22)",color:"#A8A9AD",border:"1px solid rgba(168,169,173,.55)"}:rank===3?{background:"rgba(205,127,50,.22)",color:"#CD7F32",border:"1px solid rgba(205,127,50,.55)"}:{};return(
-        <div key={m.id} className={`lb-row${m.id===memberId?" me":""}`}>
-          <div className={`lb-rank${rank<=3?" top":""}`}>{rank}</div>
-          <div className="lb-av" style={av}>{initials(m.name)}</div>
-          <div className="lb-name">{m.name}{m.id===memberId&&<span className="you">You</span>}</div>
-          <div className="lb-streak">🔥 {m.streak}d</div>
-          <div className="lb-pts">{m.points.toLocaleString()}</div>
-        </div>
-      );})}
-      {showMe&&<><div style={{textAlign:"center",padding:"10px 0",color:"#6B6866",fontSize:12,letterSpacing:1}}>• • •</div>
-        <div className="lb-row me">
-          <div className="lb-rank">{meIdx+1}</div>
-          <div className="lb-av" style={{background:"rgba(245,128,32,.22)",color:"#F58020",border:"1px solid rgba(245,128,32,.55)"}}>{initials(me.name)}</div>
-          <div className="lb-name">{me.name}<span className="you">You</span></div>
-          <div className="lb-streak">🔥 {me.streak}d</div>
-          <div className="lb-pts">{me.points.toLocaleString()}</div>
-        </div></>}
-    </div>
-  );
+  return (<div><div className="sec-label">This Month's Rankings</div>{top10.map((m,i)=>{const r=i+1;const av=r===1?{background:"rgba(212,175,55,.22)",color:"#D4AF37",border:"1px solid rgba(212,175,55,.55)"}:r===2?{background:"rgba(168,169,173,.22)",color:"#A8A9AD",border:"1px solid rgba(168,169,173,.55)"}:r===3?{background:"rgba(205,127,50,.22)",color:"#CD7F32",border:"1px solid rgba(205,127,50,.55)"}:{};return(<div key={m.id} className={`lb-row${m.id===memberId?" me":""}`}><div className={`lb-rank${r<=3?" top":""}`}>{r}</div><div className="lb-av" style={av}>{initials(m.name)}</div><div className="lb-name">{m.name}{m.id===memberId&&<span className="you">You</span>}</div><div className="lb-streak">🔥 {m.streak}d</div><div className="lb-pts">{m.points.toLocaleString()}</div></div>);})} {me&&meIdx>=10&&<><div style={{textAlign:"center",padding:"10px 0",color:"#6B6866",fontSize:12}}>• • •</div><div className="lb-row me"><div className="lb-rank">{meIdx+1}</div><div className="lb-av" style={{background:"rgba(245,128,32,.22)",color:"#F58020",border:"1px solid rgba(245,128,32,.55)"}}>{initials(me.name)}</div><div className="lb-name">{me.name}<span className="you">You</span></div><div className="lb-streak">🔥 {me.streak}d</div><div className="lb-pts">{me.points.toLocaleString()}</div></div></>}</div>);
 }
 
 const TABS=[{id:"activity",label:"Activity"},{id:"earn",label:"Earn"},{id:"rewards",label:"Rewards"},{id:"challenges",label:"Challenges"},{id:"leaderboard",label:"Rankings"}];
@@ -542,58 +391,42 @@ export default function MemberPortal() {
   const loadData = async (id) => {
     const mid = id||memberId;
     const [m,t,r,rw,ti] = await Promise.all([
-      sload("uruz:members",[]), sload("uruz:transactions",[]),
-      sload("uruz:redemptions",[]), sload("uruz:rewards",DEF_REWARDS), sload("uruz:tiers",DEF_TIERS),
+      getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers()
     ]);
-    const normalizedMembers = m.map(normalizeMember);
-    setMembers(normalizedMembers); setTxns(t); setRdms(r); setRewards(rw); setTiers(ti);
-    const found = normalizedMembers.find(x=>x.id===mid);
-    setMember(found || null);
+    const normalized = m.map(normalizeMember);
+    setMembers(normalized); setTxns(t); setRdms(r);
+    setRewards(rw.length ? rw : DEF_REWARDS);
+    setTiers(ti.length ? ti : DEF_TIERS);
+    const found = normalized.find(x=>x.id===mid);
+    setMember(found||null);
     setLoaded(true);
   };
 
   useEffect(() => {
     const session = getSession();
-    if (session?.memberId) { setMemberId(session.memberId); loadData(session.memberId); }
+    if(session?.memberId) { setMemberId(session.memberId); loadData(session.memberId); }
   }, []);
-
-  useEffect(() => { if(memberId&&!loaded) loadData(memberId); }, [memberId]);
 
   const handleLogin = (id) => { setMemberId(id); loadData(id); };
 
   const handleRequest = async (reward) => {
     const rdm = { id:genId("RDM"), memberId:member.id, memberName:member.name, reward:reward.name, pts:reward.pts, status:"pending", date:today() };
-    const existing = await sload("uruz:redemptions",[]);
-    await ssave("uruz:redemptions",[rdm,...existing]);
+    await addRedemption(rdm);
     setRdms(prev=>[rdm,...prev]);
     showToast(`Requested: ${reward.name} — see the front desk`);
   };
 
   const handleLogout = () => { clearSession(); setMemberId(null); setMember(null); setLoaded(false); };
 
-  if (!memberId) return <LoginFlow onLogin={handleLogin}/>;
-  if (!loaded) return (<><style>{CSS}</style><div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#1F2020"}}><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:4,color:"#F58020"}}>LOADING…</div></div></>);
-  if (!member) return (
-    <>
-      <style>{CSS}</style>
-      <div className="screen">
-        <div className="box">
-          <div className="brand">URUZ</div>
-          <div className="brand-sub">Loyalty Program</div>
-          <div className="divider"/>
-          <div className="step-title">Account Not Found</div>
-          <div className="step-sub">Your account could not be loaded. Please sign in again or contact the front desk.</div>
-          <button className="btn btn-primary" onClick={handleLogout}>Back to Sign In</button>
-        </div>
-      </div>
-    </>
-  );
+  if(!memberId) return <LoginFlow onLogin={handleLogin}/>;
+  if(!loaded) return (<><style>{CSS}</style><div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#1F2020"}}><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:4,color:"#F58020"}}>LOADING…</div></div></>);
+  if(!member) return (<><style>{CSS}</style><div className="screen"><div className="box"><div className="brand">URUZ</div><div className="brand-sub">Loyalty Program</div><div className="divider"/><div className="step-title">Account Not Found</div><div className="step-sub">Your account could not be loaded. Please sign in again or contact the front desk.</div><button className="btn btn-primary" onClick={handleLogout}>Back to Sign In</button></div></div></>);
 
   const tier=getTier(member.points,tiers);
   const next=getNext(member.points,tiers);
   const tierPct=next?Math.round(((member.points-tier.min)/(next.min-tier.min))*100):100;
   const rank=[...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).findIndex(m=>m.id===member.id)+1;
-  const myRdms=redemptions.filter(r=>r.memberId===member.id);
+  const myRdms=redemptions.filter(r=>r.memberId===member.id||r.member_id===member.id);
 
   return (
     <>
@@ -614,10 +447,7 @@ export default function MemberPortal() {
               </div>
             </div>
           </div>
-          <div className="pts-row">
-            <div className="pts-val">{member.points.toLocaleString()}</div>
-            <div className="pts-lbl">Points</div>
-          </div>
+          <div className="pts-row"><div className="pts-val">{member.points.toLocaleString()}</div><div className="pts-lbl">Points</div></div>
           {next&&<><div className="prog-labels"><span>{tier.name}</span><span style={{color:next.color}}>{(next.min-member.points).toLocaleString()} to {next.name}</span></div><div className="prog-track"><div className="prog-fill" style={{width:`${tierPct}%`,background:`linear-gradient(90deg,#026F91,#F58020)`}}/></div></>}
           <div className="stats-strip">
             <div className="stat-cell"><div className="stat-num" style={{color:"#F58020"}}>#{rank}</div><div className="stat-lbl">Club Rank</div></div>
@@ -631,7 +461,7 @@ export default function MemberPortal() {
           {tab==="earn"       &&<EarnTab tiers={tiers} memberPts={member.points}/>}
           {tab==="rewards"    &&<RewardsTab rewards={rewards} memberPts={member.points} myRedemptions={myRdms} onRequest={handleRequest}/>}
           {tab==="challenges" &&<ChallengesTab/>}
-          {tab==="leaderboard"&&<LeaderboardTab members={members} memberId={member.id} tiers={tiers}/>}
+          {tab==="leaderboard"&&<LeaderboardTab members={members} memberId={member.id}/>}
         </div>
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
       </div>
