@@ -848,10 +848,18 @@ function EarnRules({ toast }) {
   const [saving, setSaving]   = useState(false);
 
   useEffect(() => {
-    getEarnRules().then(data => {
-      setRules(data.length ? data : DEF_EARN_RULES);
+    (async () => {
+      const data = await getEarnRules();
+      if (data.length === 0) {
+        for (const rule of DEF_EARN_RULES) {
+          await upsertEarnRule(rule);
+        }
+        setRules(DEF_EARN_RULES);
+      } else {
+        setRules(data);
+      }
       setLoaded(true);
-    });
+    })();
   }, []);
 
   const handleAdd = async () => {
