@@ -57,16 +57,13 @@ const DEF_REWARDS = [
 
 // ── STORAGE ──────────────────────────────────────────────
 async function sload(key, fallback) {
-  try {
-    const val = localStorage.getItem(key);
-    return val ? JSON.parse(val) : fallback;
-  } catch { return fallback; }
+  try { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : fallback; }
+  catch { return fallback; }
 }
 async function ssave(key, val) {
-  try {
-    localStorage.setItem(key, JSON.stringify(val));
-  } catch {}
+  try { await window.storage.set(key, JSON.stringify(val)); } catch {}
 }
+
 // ── UTILS ─────────────────────────────────────────────────
 function getTier(pts, tiers) {
   const sorted = [...tiers].sort((a,b) => b.min - a.min);
@@ -435,6 +432,11 @@ function Members({ members, setMembers, transactions, tiers, onAward, toast }) {
     toast("Member status updated");
   };
 
+  const resetPin = (id, name) => {
+    setMembers(prev => prev.map(m => m.id===id ? {...m, pin:null} : m));
+    toast(`PIN reset for ${name} — they will set a new one on next login`);
+  };
+
   const sel = selected ? members.find(m=>m.id===selected) : null;
   const selTxns = sel ? transactions.filter(t=>t.memberId===sel.id).slice(0,10) : [];
   const tier = sel ? getTier(sel.points, tiers) : null;
@@ -525,11 +527,18 @@ function Members({ members, setMembers, transactions, tiers, onAward, toast }) {
               ))
             }
           </div>
-          <div style={{marginTop:16,display:"flex",gap:8}}>
+          <div style={{marginTop:16,display:"flex",gap:8,flexWrap:"wrap"}}>
             <button className="btn btn-primary" onClick={()=>{setSelected(null);onAward(sel);}}>Award Points</button>
             <button className="btn btn-ghost" onClick={()=>toggleStatus(sel.id)}>
               {sel.status==="active"?"Deactivate":"Activate"}
             </button>
+            <button className="btn btn-ghost" onClick={()=>resetPin(sel.id,sel.name)} style={{borderColor:"#F5A623",color:"#F5A623"}}>
+              Reset PIN
+            </button>
+          </div>
+          <div style={{marginTop:12,fontSize:11,color:"#6B6866",fontWeight:500}}>
+            PIN Status: <span style={{color:sel.pin?"#22C55E":"#EF4444",fontWeight:700}}>{sel.pin?"Set":"Not set"}</span>
+            {sel.pin&&" — staff cannot view PIN, only reset it"}
           </div>
         </Modal>
       )}
@@ -818,8 +827,50 @@ function Settings({ tiers, setTiers, toast }) {
     setLocal(prev=>prev.map(t=>t.id===id?{...t,[field]:field==="min"?Number(val):val}:t));
   };
 
+  const [showQR, setShowQR] = useState(false);
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://uruz-loyalty.vercel.app";
+
   return (
     <div style={{maxWidth:600}}>
+
+      {/* QR CODE SECTION */}
+      <div className="sec-hdr" style={{marginBottom:8}}><div className="sec-title">Check-In QR Code</div></div>
+      <div style={{background:"#252627",border:"1px solid #333435",padding:20,marginBottom:28}}>
+        <div style={{fontSize:13,color:"#6B6866",fontWeight:500,marginBottom:16,lineHeight:1.6}}>
+          Print this QR code and display it at the gym entrance. Members scan it to check in and earn 50 points automatically.
+        </div>
+        <div style={{display:"flex",gap:10,alignItems:"flex-start",flexWrap:"wrap"}}>
+          <button className="btn btn-primary" style={{width:"auto",padding:"8px 20px"}} onClick={()=>setShowQR(true)}>
+            Show QR Code
+          </button>
+          <a href={`${siteUrl}/checkin`} target="_blank" rel="noopener noreferrer"
+            style={{display:"inline-flex",alignItems:"center",padding:"8px 20px",border:"1px solid #333435",color:"#6B6866",fontSize:11,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'Montserrat',sans-serif",textDecoration:"none"}}>
+            Test Check-In Page
+          </a>
+        </div>
+      </div>
+
+      {showQR && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setShowQR(false)}>
+          <div style={{background:"#252627",border:"1px solid #333435",padding:32,maxWidth:380,width:"100%",textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:2,color:"#FFFDF3",marginBottom:4}}>Check-In QR Code</div>
+            <div style={{fontSize:11,color:"#6B6866",marginBottom:20,fontWeight:500}}>Display at the gym entrance</div>
+            <div style={{background:"#fff",padding:16,display:"inline-block",marginBottom:16}}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(siteUrl+"/checkin")}&bgcolor=ffffff&color=1F2020&margin=0`}
+                alt="Check-in QR Code"
+                width={240} height={240}
+              />
+            </div>
+            <div style={{fontSize:11,color:"#6B6866",marginBottom:20,fontFamily:"'JetBrains Mono',monospace"}}>{siteUrl}/checkin</div>
+            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+              <button className="btn btn-primary" style={{width:"auto",padding:"8px 20px"}} onClick={()=>window.print()}>Print</button>
+              <button className="btn btn-ghost" style={{width:"auto",padding:"8px 20px"}} onClick={()=>setShowQR(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="sec-hdr">
         <div className="sec-title">Tier Configuration</div>
         <button className="btn btn-primary" onClick={save}>Save Tiers</button>
@@ -975,4 +1026,4 @@ export default function AdminApp() {
       </div>
     </>
   );
-      }
+}
