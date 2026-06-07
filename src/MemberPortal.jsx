@@ -3,7 +3,8 @@ import {
   getMembers, getMemberByPhone, getMemberById, upsertMember,
   updateMemberPin, getTransactions, addTransaction,
   getRedemptions, addRedemption, getRewards, getTiers,
-  getMemberEnrollments, enrollInChallenge, getDisplaySettings
+  getMemberEnrollments, enrollInChallenge, getDisplaySettings,
+  getEarnRules
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&display=swap');`;
@@ -359,9 +360,10 @@ function ActivityTab({ transactions, memberId }) {
   return (<div><div className="sec-label">Your Activity</div>{myTxns.map(a=>{const k=cfg[a.type]||cfg.checkin;return(<div key={a.id} className="act-row"><div className="act-icon" style={{background:k.bg}}>{k.e}</div><div style={{flex:1}}><div className="act-label">{a.note}</div><div className="act-date">{fmtDate(a.date)}</div></div><div className="act-pts" style={{color:a.pts>0?"#22C55E":"#EF4444"}}>{a.pts>0?"+":""}{a.pts}</div></div>);})}</div>);
 }
 
-function EarnTab({ tiers, memberPts }) {
+function EarnTab({ tiers, memberPts, earnRules }) {
   const cur=getTier(memberPts,tiers);
-  return (<div><div className="sec-label">Tier Path</div><div className="tier-ladder">{[...tiers].sort((a,b)=>a.min-b.min).map(t=>(<div key={t.id} className={`tier-rung${t.name===cur.name?" cur":""}`}><span className="tier-rung-icon">{t.icon}</span><div className="tier-rung-name" style={{color:t.color}}>{t.name}</div><div className="tier-rung-min">{t.min.toLocaleString()}+</div></div>))}</div><div className="sec-label">Ways to Earn</div><table className="earn-tbl"><tbody>{HOW_TO_EARN.map((e,i)=>(<tr key={i}><td style={{width:38,textAlign:"center",fontSize:20}}>{e.icon}</td><td><div className="earn-action">{e.action}</div><div className="earn-note">{e.note}</div></td><td className="earn-pts">{typeof e.pts==="number"?`+${e.pts}`:e.pts} <span style={{fontSize:11,color:"#6B6866"}}>PTS</span></td></tr>))}</tbody></table></div>);
+  const rules = earnRules && earnRules.length > 0 ? earnRules : HOW_TO_EARN;
+  return (<div><div className="sec-label">Tier Path</div><div className="tier-ladder">{[...tiers].sort((a,b)=>a.min-b.min).map(t=>(<div key={t.id} className={`tier-rung${t.name===cur.name?" cur":""}`}><span className="tier-rung-icon">{t.icon}</span><div className="tier-rung-name" style={{color:t.color}}>{t.name}</div><div className="tier-rung-min">{t.min.toLocaleString()}+</div></div>))}</div><div className="sec-label">Ways to Earn</div><table className="earn-tbl"><tbody>{rules.map((e,i)=>(<tr key={e.id||i}><td style={{width:38,textAlign:"center",fontSize:20}}>{e.icon}</td><td><div className="earn-action">{e.action}</div><div className="earn-note">{e.note}</div></td><td className="earn-pts">{typeof e.pts==="number"?`+${e.pts}`:e.pts} <span style={{fontSize:11,color:"#6B6866"}}>PTS</span></td></tr>))}</tbody></table></div>);
 }
 
 function RewardsTab({ rewards, memberPts, myRedemptions, onRequest }) {
@@ -468,6 +470,7 @@ export default function MemberPortal() {
   const [rewards,setRewards]     = useState(DEF_REWARDS);
   const [tiers,setTiers]         = useState(DEF_TIERS);
   const [challenges,setChallenges] = useState(DEF_CHALLENGES);
+  const [earnRules,setEarnRules]   = useState(HOW_TO_EARN);
   const [tab,setTab]             = useState("activity");
   const [loaded,setLoaded]       = useState(false);
   const [toast,setToast]         = useState({msg:"",on:false});
@@ -476,9 +479,10 @@ export default function MemberPortal() {
 
   const loadData = async (id) => {
     const mid = id||memberId;
-    const [m,t,r,rw,ti,ds] = await Promise.all([
-      getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers(), getDisplaySettings()
+    const [m,t,r,rw,ti,ds,er] = await Promise.all([
+      getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers(), getDisplaySettings(), getEarnRules()
     ]);
+    if (er && er.length > 0) setEarnRules(er.filter(r=>r.active));
     const normalized = m.map(normalizeMember);
     setMembers(normalized); setTxns(t); setRdms(r);
     setRewards(rw.length?rw:DEF_REWARDS);
@@ -554,7 +558,7 @@ export default function MemberPortal() {
         <div className="nav">{TABS.map(t=><button key={t.id} className={`nav-btn${tab===t.id?" on":""}`} onClick={()=>setTab(t.id)}>{t.label}</button>)}</div>
         <div className="content" key={tab}>
           {tab==="activity"   &&<ActivityTab transactions={transactions} memberId={member.id}/>}
-          {tab==="earn"       &&<EarnTab tiers={tiers} memberPts={member.points}/>}
+          {tab==="earn"       &&<EarnTab tiers={tiers} memberPts={member.points} earnRules={earnRules}/>}
           {tab==="rewards"    &&<RewardsTab rewards={rewards} memberPts={member.points} myRedemptions={myRdms} onRequest={handleRequest}/>}
           {tab==="challenges" &&<ChallengesTab memberId={member.id} challenges={challenges}/>}
           {tab==="leaderboard"&&<LeaderboardTab members={members} memberId={member.id}/>}
