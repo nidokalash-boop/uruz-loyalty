@@ -362,115 +362,86 @@ function RewardsTab({ rewards, memberPts, myRedemptions, onRequest }) {
   return (<div><div style={{marginBottom:18}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",marginBottom:4,fontWeight:600}}>Your Balance</div><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:38,color:"#F58020",lineHeight:1}}>{memberPts.toLocaleString()} <span style={{fontSize:16,color:"#6B6866"}}>PTS</span></div></div>{myRedemptions.filter(r=>r.status==="pending").length>0&&(<div className="rdm-pending"><div className="rdm-pending-title">⏳ Pending Redemptions</div>{myRedemptions.filter(r=>r.status==="pending").map(r=>(<div key={r.id} className="rdm-pending-item"><span style={{fontSize:13,fontWeight:500}}>{r.reward}</span><span style={{fontSize:11,color:"#026F91",fontWeight:700}}>See front desk</span></div>))}</div>)}<div className="pills">{cats.map(c=><button key={c} className={`pill${filter===c?" on":""}`} onClick={()=>setFilter(c)}>{c}</button>)}</div><div className="rewards-grid">{list.map(r=>{const ip=pendingNames.includes(r.name);return(<div key={r.id} className={`rwd-card${!r.stock?" oos":""}`}>{!r.stock&&<span className="oos-tag">Sold Out</span>}<span className="rwd-icon">{r.icon}</span><div className="rwd-cat">{r.cat}</div><div className="rwd-name">{r.name}</div><div className="rwd-footer"><div className="rwd-cost">{r.pts.toLocaleString()}</div><button className={`rdm-btn${ip?" pending-btn":""}`} disabled={(!ip&&memberPts<r.pts)||!r.stock} onClick={()=>!ip&&onRequest(r)}>{ip?"Requested":memberPts<r.pts?"Need more":"Request"}</button></div></div>);})}</div></div>);
 }
 
-function ChallengesTab() {
-  return (<div><div className="sec-label">Active Challenges</div>{DEF_CHALLENGES.map(c=>{const pct=Math.round((c.progress/c.goal)*100);return(<div key={c.id} className="ch-card"><div className="ch-top"><div className="ch-icon-w">{c.icon}</div><div><div className="ch-name">{c.name}</div><div className="ch-desc">{c.desc}</div></div></div><div className="ch-meta"><span className="ch-dl">⏱ {c.deadline}</span><span className="ch-rew">+{c.pts} PTS</span></div><div className="ch-track"><div className="ch-fill" style={{width:`${pct}%`}}/></div><div className="ch-bar-lbl"><span>{c.progress}/{c.goal} complete</span><span style={{color:pct===100?"#22C55E":"#6B6866"}}>{pct}%</span></div></div>);})}</div>);
-}
+function ChallengesTab({ memberId, displaySettings }) {
+  const [enrollments, setEnrollments] = useState([]);
+  const [joining, setJoining] = useState(null);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastOn, setToastOn] = useState(false);
 
-function LeaderboardTab({ members, memberId }) {
-  const sorted=[...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points);
-  const top10=sorted.slice(0,10);
-  const meIdx=sorted.findIndex(m=>m.id===memberId);
-  const me=sorted[meIdx];
-  return (<div><div className="sec-label">This Month's Rankings</div>{top10.map((m,i)=>{const r=i+1;const av=r===1?{background:"rgba(212,175,55,.22)",color:"#D4AF37",border:"1px solid rgba(212,175,55,.55)"}:r===2?{background:"rgba(168,169,173,.22)",color:"#A8A9AD",border:"1px solid rgba(168,169,173,.55)"}:r===3?{background:"rgba(205,127,50,.22)",color:"#CD7F32",border:"1px solid rgba(205,127,50,.55)"}:{};return(<div key={m.id} className={`lb-row${m.id===memberId?" me":""}`}><div className={`lb-rank${r<=3?" top":""}`}>{r}</div><div className="lb-av" style={av}>{initials(m.name)}</div><div className="lb-name">{m.name}{m.id===memberId&&<span className="you">You</span>}</div><div className="lb-streak">🔥 {m.streak}d</div><div className="lb-pts">{m.points.toLocaleString()}</div></div>);})} {me&&meIdx>=10&&<><div style={{textAlign:"center",padding:"10px 0",color:"#6B6866",fontSize:12}}>• • •</div><div className="lb-row me"><div className="lb-rank">{meIdx+1}</div><div className="lb-av" style={{background:"rgba(245,128,32,.22)",color:"#F58020",border:"1px solid rgba(245,128,32,.55)"}}>{initials(me.name)}</div><div className="lb-name">{me.name}<span className="you">You</span></div><div className="lb-streak">🔥 {me.streak}d</div><div className="lb-pts">{me.points.toLocaleString()}</div></div></>}</div>);
-}
+  const showToast = msg => { setToastMsg(msg); setToastOn(true); setTimeout(()=>setToastOn(false),2600); };
 
-const TABS=[{id:"activity",label:"Activity"},{id:"earn",label:"Earn"},{id:"rewards",label:"Rewards"},{id:"challenges",label:"Challenges"},{id:"leaderboard",label:"Rankings"}];
-
-export default function MemberPortal() {
-  const [memberId,setMemberId] = useState(null);
-  const [member,setMember]     = useState(null);
-  const [members,setMembers]   = useState([]);
-  const [transactions,setTxns] = useState([]);
-  const [redemptions,setRdms]  = useState([]);
-  const [rewards,setRewards]   = useState(DEF_REWARDS);
-  const [tiers,setTiers]       = useState(DEF_TIERS);
-  const [tab,setTab]           = useState("activity");
-  const [loaded,setLoaded]     = useState(false);
-  const [toast,setToast]       = useState({msg:"",on:false});
-
-  const showToast = msg => { setToast({msg,on:true}); setTimeout(()=>setToast(t=>({...t,on:false})),2600); };
-
-  const [displaySettings, setDisplaySettings] = useState(null);
-
- const loadData = async (id) => {
-    const mid = id||memberId;
-    const [m,t,r,rw,ti,ds] = await Promise.all([
-      getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers(),
-      getDisplaySettings()
-    ]);
-    if(ds){try{setDisplaySettings(JSON.parse(ds.config||"{}"));}catch{}}
-    const normalized = m.map(normalizeMember);
-    setMembers(normalized); setTxns(t); setRdms(r);
-    setRewards(rw.length ? rw : DEF_REWARDS);
-    setTiers(ti.length ? ti : DEF_TIERS);
-    const found = normalized.find(x=>x.id===mid);
-    setMember(found||null);
-    setLoaded(true);
-  };
+  const challenges = (displaySettings?.challenges && displaySettings.challenges.length > 0)
+    ? displaySettings.challenges.filter(c => c.active !== false)
+    : DEF_CHALLENGES;
 
   useEffect(() => {
-    const session = getSession();
-    if(session?.memberId) { setMemberId(session.memberId); loadData(session.memberId); }
-  }, []);
+    if (memberId) getMemberEnrollments(memberId).then(setEnrollments);
+  }, [memberId]);
 
-  const handleLogin = (id) => { setMemberId(id); loadData(id); };
+  const isEnrolled = (cid) => enrollments.find(e => e.challengeId === String(cid));
 
-  const handleRequest = async (reward) => {
-    const rdm = { id:genId("RDM"), memberId:member.id, memberName:member.name, reward:reward.name, pts:reward.pts, status:"pending", date:today() };
-    await addRedemption(rdm);
-    setRdms(prev=>[rdm,...prev]);
-    showToast(`Requested: ${reward.name} — see the front desk`);
+  const handleJoin = async (c) => {
+    if (joining) return;
+    setJoining(c.id);
+    const enrollment = {
+      id: genId("ENR"),
+      challengeId: String(c.id),
+      challengeName: c.name,
+      memberId,
+      memberName: "",
+      progress: 0,
+      goal: c.goal || 1,
+      enrolledDate: today(),
+    };
+    await enrollInChallenge(enrollment);
+    setEnrollments(prev => [...prev, {...enrollment, completed: false}]);
+    setJoining(null);
+    showToast(`Joined: ${c.name}!`);
   };
 
-  const handleLogout = () => { clearSession(); setMemberId(null); setMember(null); setLoaded(false); };
-
-  if(!memberId) return <LoginFlow onLogin={handleLogin}/>;
-  if(!loaded) return (<><style>{CSS}</style><div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#1F2020"}}><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:4,color:"#F58020"}}>LOADING…</div></div></>);
-  if(!member) return (<><style>{CSS}</style><div className="screen"><div className="box"><div className="brand">URUZ</div><div className="brand-sub">Loyalty Program</div><div className="divider"/><div className="step-title">Account Not Found</div><div className="step-sub">Your account could not be loaded. Please sign in again or contact the front desk.</div><button className="btn btn-primary" onClick={handleLogout}>Back to Sign In</button></div></div></>);
-
-  const tier=getTier(member.points,tiers);
-  const next=getNext(member.points,tiers);
-  const tierPct=next?Math.round(((member.points-tier.min)/(next.min-tier.min))*100):100;
-  const rank=[...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).findIndex(m=>m.id===member.id)+1;
-  const myRdms=redemptions.filter(r=>r.memberId===member.id||r.member_id===member.id);
-
   return (
-    <>
-      <style>{CSS}</style>
-      <div className="app">
-        <div className="hdr">
-          <div className="hdr-top">
-            <div>
-              <div className="brand-mark">URUZ ATHLETICS · LOYALTY</div>
-              <div className="member-name">{member.name}</div>
-              <div className="member-meta">Member since {new Date(member.joinDate).toLocaleDateString("en-GB",{month:"short",year:"numeric"})} · {member.id}</div>
-            </div>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
-              <div className="tier-badge" style={{color:tier.color,borderColor:tier.color,background:`${tier.color}18`}}>{tier.icon} {tier.name}</div>
-              <div style={{display:"flex",gap:6}}>
-                <button className="icon-btn" onClick={()=>loadData()}>↻</button>
-                <button className="icon-btn" onClick={handleLogout}>Sign Out</button>
+    <div>
+      <div className="sec-label">Active Challenges</div>
+      {challenges.map(c => {
+        const enrolled = isEnrolled(c.id);
+        const progress = enrolled ? enrolled.progress : 0;
+        const goal = c.goal || 1;
+        const pct = Math.min(100, Math.round((progress / goal) * 100));
+        const completed = enrolled?.completed;
+        return (
+          <div key={c.id} className="ch-card" style={{borderColor: completed ? "#22C55E" : enrolled ? "rgba(245,128,32,.4)" : ""}}>
+            <div className="ch-top">
+              <div className="ch-icon-w">{c.icon}</div>
+              <div style={{flex:1}}>
+                <div className="ch-name">{c.name}</div>
+                <div className="ch-desc">{c.desc}</div>
               </div>
+              {completed ? (
+                <div style={{background:"rgba(34,197,94,.15)",color:"#22C55E",padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase"}}>✓ Done</div>
+              ) : enrolled ? (
+                <div style={{background:"rgba(245,128,32,.15)",color:"#F58020",padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase"}}>Joined</div>
+              ) : (
+                <button onClick={() => handleJoin(c)} disabled={joining === c.id}
+                  style={{background:"#F58020",border:"none",color:"#fff",padding:"6px 14px",fontFamily:"'Montserrat',sans-serif",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer"}}>
+                  {joining === c.id ? "..." : "Join"}
+                </button>
+              )}
             </div>
+            <div className="ch-meta">
+              <span className="ch-dl">⏱ {c.deadline}</span>
+              <span className="ch-rew">+{c.pts} PTS</span>
+            </div>
+            {enrolled && <>
+              <div className="ch-track"><div className="ch-fill" style={{width:`${pct}%`}}/></div>
+              <div className="ch-bar-lbl">
+                <span>{progress} / {goal} complete</span>
+                <span style={{color:pct>=100?"#22C55E":"#6B6866"}}>{pct}%</span>
+              </div>
+            </>}
           </div>
-          <div className="pts-row"><div className="pts-val">{member.points.toLocaleString()}</div><div className="pts-lbl">Points</div></div>
-          {next&&<><div className="prog-labels"><span>{tier.name}</span><span style={{color:next.color}}>{(next.min-member.points).toLocaleString()} to {next.name}</span></div><div className="prog-track"><div className="prog-fill" style={{width:`${tierPct}%`,background:`linear-gradient(90deg,#026F91,#F58020)`}}/></div></>}
-          <div className="stats-strip">
-            <div className="stat-cell"><div className="stat-num" style={{color:"#F58020"}}>#{rank}</div><div className="stat-lbl">Club Rank</div></div>
-            <div className="stat-cell"><div className="stat-num">🔥 {member.streak}</div><div className="stat-lbl">Day Streak</div></div>
-            <div className="stat-cell"><div className="stat-num">{member.checkins}</div><div className="stat-lbl">Check-ins</div></div>
-          </div>
-        </div>
-        <div className="nav">{TABS.map(t=><button key={t.id} className={`nav-btn${tab===t.id?" on":""}`} onClick={()=>setTab(t.id)}>{t.label}</button>)}</div>
-        <div className="content" key={tab}>
-          {tab==="activity"   &&<ActivityTab transactions={transactions} memberId={member.id}/>}
-          {tab==="earn"       &&<EarnTab tiers={tiers} memberPts={member.points}/>}
-          {tab==="rewards"    &&<RewardsTab rewards={rewards} memberPts={member.points} myRedemptions={myRdms} onRequest={handleRequest}/>}
-          {tab==="challenges" &&<ChallengesTab memberId={member.id} displaySettings={displaySettings}/>}
-          {tab==="leaderboard"&&<LeaderboardTab members={members} memberId={member.id}/>}
-        </div>
-        <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
-      </div>
-    </>
+        );
+      })}
+      <div className={`toast${toastOn?" on":""}`}>✓ {toastMsg}</div>
+    </div>
   );
 }
