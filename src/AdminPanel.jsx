@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-// v2
 import {
   getMembers, upsertMember, updateMemberStatus, resetMemberPin,
   getTransactions, addTransaction,
@@ -8,7 +7,8 @@ import {
   getTiers, upsertTier,
   getStaff, upsertStaff, deleteStaff,
   getDisplaySettings, saveDisplaySettings,
-  getEnrollments, completeEnrollment
+  getEnrollments, completeEnrollment,
+  getEarnRules, upsertEarnRule, deleteEarnRule
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');`;
@@ -46,8 +46,8 @@ const ROLES = {
 };
 
 const PERMISSIONS = {
-  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","challenges","settings"],
-  manager:    ["dashboard","members","award","redemptions","rewards","display","challenges"],
+  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","challenges","earn","settings"],
+  manager:    ["dashboard","members","award","redemptions","rewards","display","challenges","earn"],
   front_desk: ["dashboard","members","award","redemptions"],
   trainer:    ["dashboard","members","award"],
 };
@@ -826,6 +826,140 @@ function ChallengesPanel({members, setMembers, setTransactions, toast, displaySe
   );
 }
 
+
+// ── EARN RULES ───────────────────────────────────────────
+const DEF_EARN_RULES = [
+  { id:"ER-001", icon:"📍", action:"Daily Check-in",            pts:"50",   note:"Scan QR at entrance",   active:true, sort_order:0 },
+  { id:"ER-002", icon:"🧑‍🏫", action:"Group Class Attendance",   pts:"75",   note:"Per class",             active:true, sort_order:1 },
+  { id:"ER-003", icon:"💪", action:"Personal Training Session",  pts:"100",  note:"Per session",           active:true, sort_order:2 },
+  { id:"ER-004", icon:"👥", action:"Refer a Friend",             pts:"500",  note:"When they join",        active:true, sort_order:3 },
+  { id:"ER-005", icon:"🛒", action:"In-Gym Purchase",            pts:"3%",   note:"Of spend",              active:true, sort_order:4 },
+  { id:"ER-006", icon:"🔥", action:"7-Day Streak Bonus",         pts:"100",  note:"Auto-awarded",          active:true, sort_order:5 },
+  { id:"ER-007", icon:"📅", action:"30-Day Streak Bonus",        pts:"400",  note:"Auto-awarded",          active:true, sort_order:6 },
+  { id:"ER-008", icon:"🎂", action:"Birthday Bonus",             pts:"300",  note:"Once a year",           active:true, sort_order:7 },
+];
+
+function EarnRules({ toast }) {
+  const [rules, setRules]     = useState([]);
+  const [loaded, setLoaded]   = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm]       = useState({ icon:"⭐", action:"", pts:"", note:"", active:true });
+  const [saving, setSaving]   = useState(false);
+
+  useEffect(() => {
+    getEarnRules().then(data => {
+      setRules(data.length ? data : DEF_EARN_RULES);
+      setLoaded(true);
+    });
+  }, []);
+
+  const handleAdd = async () => {
+    if (!form.action || !form.pts) return;
+    setSaving(true);
+    const nr = { ...form, id: genId("ER"), sort_order: rules.length };
+    await upsertEarnRule(nr);
+    setRules(prev => [...prev, nr]);
+    setShowAdd(false);
+    setForm({ icon:"⭐", action:"", pts:"", note:"", active:true });
+    setSaving(false);
+    toast("Earn rule added");
+  };
+
+  const saveEdit = async () => {
+    setSaving(true);
+    await upsertEarnRule(editing);
+    setRules(prev => prev.map(r => r.id === editing.id ? editing : r));
+    setEditing(null);
+    setSaving(false);
+    toast("Earn rule updated");
+  };
+
+  const del = async (id) => {
+    await deleteEarnRule(id);
+    setRules(prev => prev.filter(r => r.id !== id));
+    toast("Earn rule removed");
+  };
+
+  const toggleActive = async (rule) => {
+    const updated = { ...rule, active: !rule.active };
+    await upsertEarnRule(updated);
+    setRules(prev => prev.map(r => r.id === rule.id ? updated : r));
+  };
+
+  if (!loaded) return <div style={{color:C.muted,padding:20}}>Loading…</div>;
+
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div className="sec-title">Ways to Earn ({rules.filter(r=>r.active).length} active)</div>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Add Rule</button>
+      </div>
+      <div style={{fontSize:12,color:C.muted,marginBottom:16,fontWeight:500}}>
+        These show in the member portal under the Earn tab. Toggle off to hide without deleting.
+      </div>
+
+      <div className="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Icon</th><th>Action</th><th>Points</th><th>Note</th><th>Active</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            {rules.map(r => (
+              <tr key={r.id} style={{opacity:r.active?1:0.5}}>
+                <td style={{fontSize:22,textAlign:"center",width:50}}>{r.icon}</td>
+                <td style={{fontWeight:600}}>{r.action}</td>
+                <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.orange}}>{r.pts}</td>
+                <td style={{color:C.muted,fontSize:12}}>{r.note}</td>
+                <td>
+                  <div className={`toggle${r.active?" on":""}`} onClick={() => toggleActive(r)}/>
+                </td>
+                <td>
+                  <div style={{display:"flex",gap:6}}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditing({...r})}>Edit</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => del(r.id)}>✕</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <Modal title="Edit Earn Rule" onClose={() => setEditing(null)} footer={<>
+          <button className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
+          <button className="btn btn-primary" onClick={saveEdit} disabled={saving}>{saving?"Saving...":"Save"}</button>
+        </>}>
+          <div className="form-row"><label className="form-label">Icon (emoji)</label><input className="form-input" value={editing.icon} onChange={e=>setEditing({...editing,icon:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Action Name</label><input className="form-input" value={editing.action} onChange={e=>setEditing({...editing,action:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Points (number or % )</label><input className="form-input" value={editing.pts} onChange={e=>setEditing({...editing,pts:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Note</label><input className="form-input" value={editing.note} onChange={e=>setEditing({...editing,note:e.target.value})}/></div>
+          <div className="form-row">
+            <label className="form-label">Active</label>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div className={`toggle${editing.active?" on":""}`} onClick={()=>setEditing({...editing,active:!editing.active})}/>
+              <span style={{fontSize:13,color:editing.active?C.success:C.muted}}>{editing.active?"Visible to members":"Hidden"}</span>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showAdd && (
+        <Modal title="Add Earn Rule" onClose={() => setShowAdd(false)} footer={<>
+          <button className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleAdd} disabled={saving}>{saving?"Saving...":"Add Rule"}</button>
+        </>}>
+          <div className="form-row"><label className="form-label">Icon (emoji)</label><input className="form-input" placeholder="e.g. 🏃" value={form.icon} onChange={e=>setForm({...form,icon:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Action Name *</label><input className="form-input" placeholder="e.g. Attend Yoga Class" value={form.action} onChange={e=>setForm({...form,action:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Points * (number or %)</label><input className="form-input" placeholder="e.g. 75 or 5%" value={form.pts} onChange={e=>setForm({...form,pts:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Note</label><input className="form-input" placeholder="e.g. Per class" value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ── ROOT ──────────────────────────────────────────────────
 const ALL_NAV=[
   {id:"dashboard",  icon:"◉", label:"Dashboard"},
@@ -836,6 +970,7 @@ const ALL_NAV=[
   {id:"staff",      icon:"👥", label:"Staff"},
   {id:"display",    icon:"📺", label:"TV Display"},
   {id:"challenges", icon:"⚔",  label:"Challenges"},
+  {id:"earn",       icon:"💰", label:"Earn Rules"},
   {id:"settings",   icon:"⚙", label:"Settings"},
 ];
 
@@ -924,6 +1059,7 @@ export default function AdminPanel(){
             {page==="staff"      &&<StaffManagement staffList={staffList} setStaffList={setStaffList} toast={showToast}/>}
             {page==="display"    &&<DisplaySettings toast={showToast}/>}
             {page==="challenges" &&<ChallengesPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast} displaySettings={displaySettings}/>}
+            {page==="earn"       &&<EarnRules toast={showToast}/>}
             {page==="settings"   &&<Settings tiers={tiers} setTiers={setTiers} toast={showToast}/>}
           </div>
         </div>
