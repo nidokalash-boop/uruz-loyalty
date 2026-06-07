@@ -235,7 +235,15 @@ function ChallengesSlide() {
 }
 
 function ActivitySlide({ transactions }) {
-  const recent = [...transactions].slice(0,8);
+  const seen = new Set();
+const recent = [...transactions]
+  .filter(t => {
+    const key = `${t.memberName||t.member_name}-${t.type}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  })
+  .slice(0, 8);
   const ACT_ICONS = {checkin:"📍",class:"💪",referral:"👥",bonus:"⭐",challenge:"🏆",manual:"✏",redeem:"🎟",deduct:"➖"};
   const half = Math.ceil(recent.length/2);
   const Row = ({a,i}) => (
