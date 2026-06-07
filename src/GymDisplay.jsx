@@ -161,41 +161,51 @@ html,body,#root{width:100%;height:100%;background:#080808;overflow:hidden;}
 
 // ── SLIDES ────────────────────────────────────────────────
 function LeaderboardSlide({ members, tiers }) {
-  const sorted = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).slice(0,10);
-  const top3   = sorted.slice(0,3);
-  const rest   = sorted.slice(3);
-  const podiumOrder = [top3[1],top3[0],top3[2]];
-  const pColors = ["#A8A9AD","#D4AF37","#CD7F32"];
-  const pRanks  = [2,1,3];
+  const sorted = [...members]
+    .filter(m => m.status === "active")
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 10);
+
+  const rankColors = ["#D4AF37", "#A8A9AD", "#CD7F32"];
 
   return (
     <div className="slide">
       <div className="slide-title">◆ Monthly Leaderboard</div>
-      <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 28px"}}>
-        <div>
-          <div className="lb-podium">
-            {podiumOrder.map((m,i)=>m ? (
-              <div key={m.id} className="podium-card" style={{borderColor:`${pColors[i]}44`,animationDelay:`${i*0.15}s`}}>
-                <div className="podium-rank" style={{color:pColors[i]}}>#{pRanks[i]}</div>
-                <div className="podium-av" style={{background:`${pColors[i]}22`,color:pColors[i],border:`1px solid ${pColors[i]}55`}}>{initials(m.name)}</div>
-                <div className="podium-name">{m.name}</div>
-                <div className="podium-pts" style={{color:pColors[i]}}>{m.points.toLocaleString()}</div>
-                <div className="podium-streak">🔥 {m.streak} day streak</div>
-              </div>
-            ) : <div key={i}/>)}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 40px", flex:1 }}>
+        {[sorted.slice(0,5), sorted.slice(5,10)].map((col, ci) => (
+          <div key={ci}>
+            {col.map((m, i) => {
+              const rank = ci * 5 + i + 1;
+              const color = rankColors[rank-1] || "#FFFDF3";
+              return (
+                <div key={m.id} style={{
+                  display:"flex", alignItems:"center", gap:14,
+                  padding:"12px 0", borderBottom:"1px solid #252525"
+                }}>
+                  <div style={{
+                    fontFamily:"'Bebas Neue',sans-serif",
+                    fontSize:28, color, width:36,
+                    textAlign:"center", flexShrink:0
+                  }}>#{rank}</div>
+                  <div style={{
+                    width:40, height:40, borderRadius:2,
+                    background:`${color}22`, border:`1px solid ${color}55`,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontFamily:"'Barlow Condensed',sans-serif",
+                    fontSize:16, fontWeight:800, color, flexShrink:0
+                  }}>{initials(m.name)}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:20, fontWeight:700, color:"#FFFDF3", lineHeight:1 }}>{m.name}</div>
+                    <div style={{ fontSize:12, color:"#666058", marginTop:2 }}>🔥 {m.streak}d streak</div>
+                  </div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, color, textAlign:"right" }}>
+                    {m.points.toLocaleString()}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-        <div>
-          {rest.map(m=>(
-            <div key={m.id} className="lb-list-row">
-              <div className="lb-list-rank">{sorted.indexOf(m)+1}</div>
-              <div className="lb-list-av">{initials(m.name)}</div>
-              <div className="lb-list-name">{m.name}</div>
-              <div className="lb-list-streak">🔥 {m.streak}d</div>
-              <div className="lb-list-pts">{m.points.toLocaleString()}</div>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   );
