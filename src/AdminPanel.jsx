@@ -46,8 +46,8 @@ const ROLES = {
 };
 
 const PERMISSIONS = {
-  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","challenges","earn","settings"],
-  manager:    ["dashboard","members","award","redemptions","rewards","display","challenges","earn"],
+  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","challenges","earn","export","settings"],
+  manager:    ["dashboard","members","award","redemptions","rewards","display","challenges","earn","export"],
   front_desk: ["dashboard","members","award","redemptions"],
   trainer:    ["dashboard","members","award"],
 };
@@ -960,6 +960,184 @@ function EarnRules({ toast }) {
   );
 }
 
+
+// ── EXPORT DATA ───────────────────────────────────────────
+function ExportData({ members, transactions, redemptions, tiers, toast }) {
+  const [exporting, setExporting] = useState(null);
+
+  const toCSV = (headers, rows) => {
+    const escape = v => {
+      const s = String(v === null || v === undefined ? "" : v);
+      return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g,'""')}"` : s;
+    };
+    const lines = [headers.join(","), ...rows.map(r => r.map(escape).join(","))];
+    return lines.join("\n");
+  };
+
+  const download = (filename, csv) => {
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const getTierName = (pts) => {
+    const sorted = [...tiers].sort((a,b)=>b.min-a.min);
+    return (sorted.find(t=>pts>=t.min)||tiers[0])?.name || "Iron";
+  };
+
+  const exports = [
+    {
+      id: "members",
+      label: "Members",
+      icon: "👥",
+      desc: "All member data — points, tiers, streaks, check-ins",
+      fn: async () => {
+        const headers = ["ID","Name","Phone","Email","Join Date","Points","Tier","Checkins","Streak","Status"];
+        const rows = [...members].sort((a,b)=>b.points-a.points).map(m => [
+          m.id, m.name, m.phone, m.email||"",
+          m.joinDate||m.join_date||"",
+          m.points, getTierName(m.points),
+          m.checkins, m.streak, m.status
+        ]);
+        download(`URUZ_Members_${today()}.csv`, toCSV(headers, rows));
+      }
+    },
+    {
+      id: "leaderboard",
+      label: "Leaderboard",
+      icon: "🏆",
+      desc: "Members ranked by points",
+      fn: async () => {
+        const headers = ["Rank","Name","Phone","Points","Tier","Streak","Check-ins","Status"];
+        const sorted = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points);
+        const rows = sorted.map((m,i) => [
+          i+1, m.name, m.phone, m.points,
+          getTierName(m.points), m.streak, m.checkins, m.status
+        ]);
+        download(`URUZ_Leaderboard_${today()}.csv`, toCSV(headers, rows));
+      }
+    },
+    {
+      id: "transactions",
+      label: "Transactions",
+      icon: "📋",
+      desc: "Full points history — all awards and deductions",
+      fn: async () => {
+        const headers = ["ID","Member","Type","Points","Note","Date"];
+        const rows = transactions.map(t => [
+          t.id, t.memberName||t.member_name||"",
+          t.type, t.pts, t.note||"", t.date||""
+        ]);
+        download(`URUZ_Transactions_${today()}.csv`, toCSV(headers, rows));
+      }
+    },
+    {
+      id: "redemptions",
+      label: "Redemptions",
+      icon: "🎟",
+      desc: "All reward redemption requests and their status",
+      fn: async () => {
+        const { getRedemptions } = await import("./supabase");
+        const rdms = await getRedemptions();
+        const headers = ["ID","Member","Reward","Points","Status","Date"];
+        const rows = rdms.map(r => [
+          r.id, r.memberName||r.member_name||"",
+          r.reward, r.pts, r.status, r.date||""
+        ]);
+        download(`URUZ_Redemptions_${today()}.csv`, toCSV(headers, rows));
+      }
+    },
+    {
+      id: "enrollments",
+      label: "Challenge Enrollments",
+      icon: "⚔",
+      desc: "Who joined which challenges and their completion status",
+      fn: async () => {
+        const { getEnrollments } = await import("./supabase");
+        const enrs = await getEnrollments();
+        const headers = ["ID","Member","Challenge","Progress","Goal","Completed","Enrolled Date","Completed Date"];
+        const rows = enrs.map(e => [
+          e.id, e.memberName||e.member_name||"",
+          e.challengeName||e.challenge_name||"",
+          e.progress||0, e.goal||1,
+          e.completed?"Yes":"No",
+          e.enrolledDate||e.enrolled_date||"",
+          e.completedDate||e.completed_date||""
+        ]);
+        download(`URUZ_Enrollments_${today()}.csv`, toCSV(headers, rows));
+      }
+    },
+    {
+      id: "earn_rules",
+      label: "Earn Rules",
+      icon: "💰",
+      desc: "Current points earning configuration",
+      fn: async () => {
+        const { getEarnRules } = await import("./supabase");
+        const rules = await getEarnRules();
+        const headers = ["Icon","Action","Points","Note","Active"];
+        const rows = rules.map(r => [r.icon||"", r.action||"", r.pts||"", r.note||"", r.active?"Yes":"No"]);
+        download(`URUZ_EarnRules_${today()}.csv`, toCSV(headers, rows));
+      }
+    },
+  ];
+
+  const handleExport = async (exp) => {
+    setExporting(exp.id);
+    try {
+      await exp.fn();
+      toast(`${exp.label} exported successfully`);
+    } catch(e) {
+      toast(`Export failed — try again`);
+    }
+    setExporting(null);
+  };
+
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div className="sec-title">Export Data</div>
+        <div style={{fontSize:12,color:C.muted,fontWeight:500}}>Downloads as CSV — opens in Excel or Google Sheets</div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+        {exports.map(exp => (
+          <div key={exp.id} style={{background:C.surface,border:`1px solid ${C.border}`,padding:20,transition:"border-color .2s"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor="rgba(245,128,32,.4)"}
+            onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+              <div style={{fontSize:28}}>{exp.icon}</div>
+              <div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:1,color:C.white}}>{exp.label}</div>
+                <div style={{fontSize:11,color:C.muted,marginTop:2}}>{exp.desc}</div>
+              </div>
+            </div>
+            <button
+              className="btn btn-primary"
+              style={{width:"100%",marginTop:4}}
+              onClick={() => handleExport(exp)}
+              disabled={exporting === exp.id}
+            >
+              {exporting === exp.id ? "Exporting…" : "⬇ Download CSV"}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div style={{marginTop:24,background:C.surface,border:`1px solid ${C.border}`,padding:16}}>
+        <div style={{fontSize:11,color:C.muted,lineHeight:1.8}}>
+          <strong style={{color:C.white}}>How to open CSV files:</strong><br/>
+          • <strong style={{color:C.white}}>Excel:</strong> Double-click the downloaded file<br/>
+          • <strong style={{color:C.white}}>Google Sheets:</strong> File → Import → Upload the CSV<br/>
+          • <strong style={{color:C.white}}>Numbers (Mac):</strong> Double-click the downloaded file
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── ROOT ──────────────────────────────────────────────────
 const ALL_NAV=[
   {id:"dashboard",  icon:"◉", label:"Dashboard"},
@@ -971,6 +1149,7 @@ const ALL_NAV=[
   {id:"display",    icon:"📺", label:"TV Display"},
   {id:"challenges", icon:"⚔",  label:"Challenges"},
   {id:"earn",       icon:"💰", label:"Earn Rules"},
+  {id:"export",     icon:"⬇", label:"Export Data"},
   {id:"settings",   icon:"⚙", label:"Settings"},
 ];
 
@@ -1060,6 +1239,7 @@ export default function AdminPanel(){
             {page==="display"    &&<DisplaySettings toast={showToast}/>}
             {page==="challenges" &&<ChallengesPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast} displaySettings={displaySettings}/>}
             {page==="earn"       &&<EarnRules toast={showToast}/>}
+            {page==="export"     &&<ExportData members={members} transactions={transactions} redemptions={redemptions} tiers={tiers} toast={showToast}/>}
             {page==="settings"   &&<Settings tiers={tiers} setTiers={setTiers} toast={showToast}/>}
           </div>
         </div>
