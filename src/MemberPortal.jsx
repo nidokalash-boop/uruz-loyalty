@@ -374,7 +374,7 @@ function RewardsTab({ rewards, memberPts, myRedemptions, onRequest }) {
   return (<div><div style={{marginBottom:18}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",marginBottom:4,fontWeight:600}}>Your Balance</div><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:38,color:"#F58020",lineHeight:1}}>{memberPts.toLocaleString()} <span style={{fontSize:16,color:"#6B6866"}}>PTS</span></div></div>{myRedemptions.filter(r=>r.status==="pending").length>0&&(<div className="rdm-pending"><div className="rdm-pending-title">⏳ Pending Redemptions</div>{myRedemptions.filter(r=>r.status==="pending").map(r=>(<div key={r.id} className="rdm-pending-item"><span style={{fontSize:13,fontWeight:500}}>{r.reward}</span><span style={{fontSize:11,color:"#026F91",fontWeight:700}}>See front desk</span></div>))}</div>)}<div className="pills">{cats.map(c=><button key={c} className={`pill${filter===c?" on":""}`} onClick={()=>setFilter(c)}>{c}</button>)}</div><div className="rewards-grid">{list.map(r=>{const ip=pendingNames.includes(r.name);return(<div key={r.id} className={`rwd-card${!r.stock?" oos":""}`}>{!r.stock&&<span className="oos-tag">Sold Out</span>}<span className="rwd-icon">{r.icon}</span><div className="rwd-cat">{r.cat}</div><div className="rwd-name">{r.name}</div><div className="rwd-footer"><div className="rwd-cost">{r.pts.toLocaleString()}</div><button className={`rdm-btn${ip?" pending-btn":""}`} disabled={(!ip&&memberPts<r.pts)||!r.stock} onClick={()=>!ip&&onRequest(r)}>{ip?"Requested":memberPts<r.pts?"Need more":"Request"}</button></div></div>);})}</div></div>);
 }
 
-function ChallengesTab({ memberId, challenges }) {
+function ChallengesTab({ memberId, memberName, challenges }) {
   const [enrollments, setEnrollments] = useState([]);
   const [joining, setJoining]         = useState(null);
   const [toastMsg, setToastMsg]       = useState("");
@@ -396,7 +396,7 @@ function ChallengesTab({ memberId, challenges }) {
       challengeId: String(c.id),
       challengeName: c.name,
       memberId,
-      memberName: "",
+      memberName: memberName || "",
       progress: 0,
       goal: c.goal || 1,
       enrolledDate: today(),
@@ -560,7 +560,7 @@ export default function MemberPortal() {
           {tab==="activity"   &&<ActivityTab transactions={transactions} memberId={member.id}/>}
           {tab==="earn"       &&<EarnTab tiers={tiers} memberPts={member.points} earnRules={earnRules}/>}
           {tab==="rewards"    &&<RewardsTab rewards={rewards} memberPts={member.points} myRedemptions={myRdms} onRequest={handleRequest}/>}
-          {tab==="challenges" &&<ChallengesTab memberId={member.id} challenges={challenges}/>}
+          {tab==="challenges" &&<ChallengesTab memberId={member.id} memberName={member.name} challenges={challenges}/>}
           {tab==="leaderboard"&&<LeaderboardTab members={members} memberId={member.id}/>}
         </div>
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
