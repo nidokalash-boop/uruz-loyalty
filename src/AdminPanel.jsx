@@ -8,7 +8,8 @@ import {
   getStaff, upsertStaff, deleteStaff,
   getDisplaySettings, saveDisplaySettings,
   getEnrollments, completeEnrollment,
-  getEarnRules, upsertEarnRule, deleteEarnRule
+  getEarnRules, upsertEarnRule, deleteEarnRule,
+  getReferrals, addReferral
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');`;
@@ -46,8 +47,8 @@ const ROLES = {
 };
 
 const PERMISSIONS = {
-  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","challenges","earn","export","settings"],
-  manager:    ["dashboard","members","award","redemptions","rewards","display","challenges","earn","export"],
+  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","challenges","earn","referrals","export","settings"],
+  manager:    ["dashboard","members","award","redemptions","rewards","display","challenges","earn","referrals","export"],
   front_desk: ["dashboard","members","award","redemptions"],
   trainer:    ["dashboard","members","award"],
 };
@@ -68,8 +69,9 @@ function normalizeMember(m) {
     streak:      m.streak      ?? 0,
     status:      m.status      || "active",
     pin:         m.pin         || null,
-    lastCheckin: m.last_checkin|| m.lastCheckin || null,
-    birthday:    m.birthday    || null,
+    lastCheckin:   m.last_checkin   || m.lastCheckin   || null,
+    birthday:      m.birthday       || null,
+    referral_code: m.referral_code  || null,
   };
 }
 
@@ -438,6 +440,7 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
         <div><label className="form-label">Phone</label><div className="mono">{sel.phone}</div></div>
         <div><label className="form-label">Joined</label><div className="mono" style={{color:C.muted}}>{sel.joinDate?fmtDate(sel.joinDate):"—"}</div></div>
         <div><label className="form-label">Birthday</label><div className="mono" style={{color:C.muted}}>{sel.birthday||"—"}</div></div>
+        <div><label className="form-label">Referral Code</label><div className="mono" style={{color:C.orange,fontWeight:700}}>{sel.referral_code||"—"}</div></div>
       </div>
       <div style={{marginBottom:16}}>
         <label className="form-label">Point History</label>
@@ -972,6 +975,139 @@ function EarnRules({ toast }) {
 }
 
 
+
+// ── REFERRALS ─────────────────────────────────────────────
+function ReferralsPanel({ members, setMembers, setTransactions, toast }) {
+  const [referrals, setReferrals] = useState([]);
+  const [loaded, setLoaded]       = useState(false);
+  const [showAdd, setShowAdd]     = useState(false);
+  const [form, setForm]           = useState({ referrerId:"", newMemberId:"" });
+  const [saving, setSaving]       = useState(false);
+
+  useEffect(() => {
+    getReferrals().then(data => { setReferrals(data); setLoaded(true); });
+  }, []);
+
+  const handleAdd = async () => {
+    const referrer = members.find(m => m.id === form.referrerId);
+    const newMember = members.find(m => m.id === form.newMemberId);
+    if (!referrer || !newMember) return;
+    setSaving(true);
+    const REF_PTS = 500;
+    const ref = {
+      id: genId("REF"),
+      referrerId: referrer.id,
+      referrerName: referrer.name,
+      referrerCode: referrer.referral_code || "",
+      newMemberId: newMember.id,
+      newMemberName: newMember.name,
+      pts: REF_PTS,
+      date: today(),
+    };
+    await addReferral(ref);
+    // Award points to referrer
+    const newPoints = referrer.points + REF_PTS;
+    await upsertMember({...referrer, points: newPoints});
+    setMembers(prev => prev.map(m => m.id===referrer.id ? {...m,points:newPoints} : m));
+    const txn = { id:genId("TXN"), memberId:referrer.id, memberName:referrer.name, type:"referral", pts:REF_PTS, note:`Referral — ${newMember.name}`, date:today() };
+    await addTransaction(txn);
+    setTransactions(prev => [txn,...prev]);
+    setReferrals(prev => [ref,...prev]);
+    setShowAdd(false);
+    setForm({ referrerId:"", newMemberId:"" });
+    setSaving(false);
+    toast(`Referral logged — +${REF_PTS} pts awarded to ${referrer.name}`);
+  };
+
+  if (!loaded) return <div style={{color:C.muted,padding:20}}>Loading…</div>;
+
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div className="sec-title">Referrals ({referrals.length})</div>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Log Referral</button>
+      </div>
+      <div style={{fontSize:12,color:C.muted,marginBottom:16,fontWeight:500}}>
+        Members earn 500 pts for each successful referral. Referrals are auto-logged when new members use a referral code. You can also log them manually here.
+      </div>
+
+      {referrals.length === 0 ? (
+        <div className="empty">No referrals yet.</div>
+      ) : (
+        <div className="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Referred By</th><th>New Member</th><th>Code</th><th>Points</th><th>Date</th>
+            </tr></thead>
+            <tbody>
+              {referrals.map(r => (
+                <tr key={r.id}>
+                  <td style={{fontWeight:600}}>{r.referrerName}</td>
+                  <td>{r.newMemberName}</td>
+                  <td className="mono" style={{color:C.orange}}>{r.referrerCode||"—"}</td>
+                  <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.success}}>+{r.pts}</td>
+                  <td className="mono" style={{color:C.muted}}>{fmtDate(r.date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Member referral codes */}
+      <div style={{marginTop:24}}>
+        <div className="sec-title" style={{marginBottom:14}}>Member Referral Codes</div>
+        <div className="tbl-wrap">
+          <table>
+            <thead><tr><th>Member</th><th>Referral Code</th><th>Total Referrals</th></tr></thead>
+            <tbody>
+              {[...members].filter(m=>m.status==="active").sort((a,b)=>a.name.localeCompare(b.name)).map(m => {
+                const count = referrals.filter(r => r.referrerId === m.id).length;
+                return (
+                  <tr key={m.id}>
+                    <td style={{fontWeight:600}}>{m.name}</td>
+                    <td className="mono" style={{color:C.orange,fontWeight:700}}>{m.referral_code||"—"}</td>
+                    <td><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:count>0?C.success:C.muted}}>{count}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showAdd && (
+        <Modal title="Log Manual Referral" onClose={() => setShowAdd(false)} footer={<>
+          <button className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleAdd} disabled={saving||!form.referrerId||!form.newMemberId}>
+            {saving?"Saving...":"Log Referral (+500 pts)"}
+          </button>
+        </>}>
+          <div className="form-row">
+            <label className="form-label">Who referred? *</label>
+            <select className="form-select" value={form.referrerId} onChange={e=>setForm({...form,referrerId:e.target.value})}>
+              <option value="">— select member —</option>
+              {[...members].sort((a,b)=>a.name.localeCompare(b.name)).map(m=>(
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
+            <label className="form-label">Who did they refer? *</label>
+            <select className="form-select" value={form.newMemberId} onChange={e=>setForm({...form,newMemberId:e.target.value})}>
+              <option value="">— select new member —</option>
+              {[...members].filter(m=>m.id!==form.referrerId).sort((a,b)=>a.name.localeCompare(b.name)).map(m=>(
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-hint">500 points will be automatically awarded to the referring member.</div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ── EXPORT DATA ───────────────────────────────────────────
 function ExportData({ members, transactions, redemptions, tiers, toast }) {
   const [exporting, setExporting] = useState(null);
@@ -1160,6 +1296,7 @@ const ALL_NAV=[
   {id:"display",    icon:"📺", label:"TV Display"},
   {id:"challenges", icon:"⚔",  label:"Challenges"},
   {id:"earn",       icon:"💰", label:"Earn Rules"},
+  {id:"referrals",  icon:"👥", label:"Referrals"},
   {id:"export",     icon:"⬇", label:"Export Data"},
   {id:"settings",   icon:"⚙", label:"Settings"},
 ];
@@ -1250,6 +1387,7 @@ export default function AdminPanel(){
             {page==="display"    &&<DisplaySettings toast={showToast}/>}
             {page==="challenges" &&<ChallengesPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast} displaySettings={displaySettings}/>}
             {page==="earn"       &&<EarnRules toast={showToast}/>}
+            {page==="referrals"  &&<ReferralsPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast}/>}
             {page==="export"     &&<ExportData members={members} transactions={transactions} redemptions={redemptions} tiers={tiers} toast={showToast}/>}
             {page==="settings"   &&<Settings tiers={tiers} setTiers={setTiers} toast={showToast}/>}
           </div>
