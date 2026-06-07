@@ -150,9 +150,9 @@ html,body,#root{width:100%;height:100%;background:#080808;overflow:hidden;}
 
 /* TICKER */
 .bottombar{height:44px;background:var(--s1);border-top:1px solid var(--border);display:flex;align-items:center;overflow:hidden;flex-shrink:0;}
-.ticker-track{display:flex;gap:0;white-space:nowrap;animation:ticker 40s linear infinite;}
+.ticker-track{display:flex;gap:0;white-space:nowrap;animation:ticker 80s linear infinite;}
 @keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-.ticker-item{display:inline-flex;align-items:center;gap:8px;padding:0 32px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;color:var(--muted);border-right:1px solid var(--border);}
+.ticker-item{display:inline-flex;align-items:center;gap:8px;padding:0 48px;font-family:'Barlow Condensed',sans-serif;font-size:18px;
 .ticker-item .hi{color:var(--text);}
 .ticker-item .acc{color:var(--accent);}
 .ticker-dot{width:5px;height:5px;background:var(--accent);border-radius:50%;opacity:.6;flex-shrink:0;}
