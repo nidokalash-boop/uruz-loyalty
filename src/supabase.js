@@ -5,6 +5,7 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_EQb-ue
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
+// ── MEMBERS ──────────────────────────────────────────────
 export async function getMembers() {
   const { data } = await supabase.from('members').select('*')
   return data || []
@@ -44,6 +45,8 @@ export async function resetMemberPin(id) {
 export async function updateMemberStatus(id, status) {
   await supabase.from('members').update({ status }).eq('id', id)
 }
+
+// ── TRANSACTIONS ─────────────────────────────────────────
 export async function getTransactions() {
   const { data } = await supabase.from('transactions').select('*').order('date', { ascending: false })
   return (data || []).map(t => ({ ...t, memberId: t.member_id, memberName: t.member_name }))
@@ -54,6 +57,8 @@ export async function addTransaction(txn) {
     type: txn.type, pts: txn.pts, note: txn.note, date: txn.date
   })
 }
+
+// ── REDEMPTIONS ──────────────────────────────────────────
 export async function getRedemptions() {
   const { data } = await supabase.from('redemptions').select('*').order('date', { ascending: false })
   return (data || []).map(r => ({ ...r, memberId: r.member_id, memberName: r.member_name }))
@@ -67,6 +72,8 @@ export async function addRedemption(rdm) {
 export async function updateRedemptionStatus(id, status) {
   await supabase.from('redemptions').update({ status }).eq('id', id)
 }
+
+// ── REWARDS ──────────────────────────────────────────────
 export async function getRewards() {
   const { data } = await supabase.from('rewards').select('*')
   return data || []
@@ -77,6 +84,8 @@ export async function upsertReward(reward) {
 export async function deleteReward(id) {
   await supabase.from('rewards').delete().eq('id', id)
 }
+
+// ── TIERS ────────────────────────────────────────────────
 export async function getTiers() {
   const { data } = await supabase.from('tiers').select('*').order('min_pts', { ascending: true })
   return (data || []).map(t => ({ ...t, min: t.min_pts }))
@@ -86,4 +95,30 @@ export async function upsertTier(tier) {
     id: tier.id, name: tier.name, min_pts: tier.min,
     color: tier.color, icon: tier.icon
   })
+}
+
+// ── STAFF ────────────────────────────────────────────────
+export async function getStaff() {
+  const { data } = await supabase.from('staff').select('*')
+  return data || []
+}
+export async function upsertStaff(member) {
+  const { data } = await supabase.from('staff').upsert(member).select().single()
+  return data
+}
+export async function deleteStaff(id) {
+  await supabase.from('staff').delete().eq('id', id)
+}
+export async function getStaffByName(name) {
+  const { data } = await supabase.from('staff').select('*').ilike('name', name).single()
+  return data || null
+}
+
+// ── DISPLAY SETTINGS ─────────────────────────────────────
+export async function getDisplaySettings() {
+  const { data } = await supabase.from('display_settings').select('*').eq('id', 'main').single()
+  return data || null
+}
+export async function saveDisplaySettings(settings) {
+  await supabase.from('display_settings').upsert({ id: 'main', ...settings })
 }
