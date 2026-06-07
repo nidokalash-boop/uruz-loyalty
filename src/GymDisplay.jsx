@@ -211,26 +211,61 @@ function LeaderboardSlide({ members, tiers }) {
   );
 }
 
-function ChallengesSlide() {
+function ChallengesSlide({ members }) {
+  const top5 = [...members]
+    .filter(m => m.status === "active")
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 5);
+
   return (
     <div className="slide">
       <div className="slide-title">⚔ Active Challenges</div>
       <div className="ch-grid">
-        {DEF_CHALLENGES.map((c,i)=>{
-          const pct=Math.round((c.progress/c.goal)*100);
+        {DEF_CHALLENGES.map((c, i) => {
+          const pct = Math.round((c.progress / c.goal) * 100);
           return (
-            <div key={c.id} className="ch-card" style={{animationDelay:`${i*0.07}s`}}>
+            <div key={c.id} className="ch-card" style={{ animationDelay:`${i*0.07}s` }}>
               <div className="ch-header">
                 <div className="ch-icon">{c.icon}</div>
-                <div><div className="ch-name">{c.name}</div><div className="ch-desc">{c.desc}</div></div>
+                <div>
+                  <div className="ch-name">{c.name}</div>
+                  <div className="ch-desc">{c.desc}</div>
+                </div>
               </div>
               <div className="ch-bar-row">
-                <div className="ch-bar-bg"><div className="ch-bar-fill" style={{width:`${pct}%`}}/></div>
+                <div className="ch-bar-bg">
+                  <div className="ch-bar-fill" style={{ width:`${pct}%` }}/>
+                </div>
                 <div className="ch-bar-pct">{pct}%</div>
               </div>
               <div className="ch-footer">
-                <div><div className="ch-reward">+{c.pts} PTS</div><div className="ch-deadline">⏱ {c.deadline} left</div></div>
-                <div className="ch-leader">Leading: <span>{c.leader}</span></div>
+                <div>
+                  <div className="ch-reward">+{c.pts} PTS</div>
+                  <div className="ch-deadline">⏱ {c.deadline} left</div>
+                </div>
+              </div>
+              <div style={{ marginTop:12, borderTop:`1px solid #252525`, paddingTop:10 }}>
+                <div style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", color:"#666058", fontWeight:700, marginBottom:8 }}>Top Members</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  {top5.map((m, idx) => (
+                    <div key={m.id} style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <div style={{
+                        fontFamily:"'Bebas Neue',sans-serif",
+                        fontSize:16, color: idx===0?"#D4AF37":idx===1?"#A8A9AD":idx===2?"#CD7F32":"#666058",
+                        width:20, flexShrink:0
+                      }}>#{idx+1}</div>
+                      <div style={{
+                        width:26, height:26, borderRadius:2,
+                        background:"rgba(245,128,32,0.15)",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        fontFamily:"'Barlow Condensed',sans-serif",
+                        fontSize:11, fontWeight:800, color:"#F58020", flexShrink:0
+                      }}>{initials(m.name)}</div>
+                      <div style={{ fontSize:13, fontWeight:600, color:"#FFFDF3", flex:1 }}>{m.name}</div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"#F58020" }}>{m.points.toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           );
@@ -376,7 +411,7 @@ export default function GymDisplay() {
 
         <div className="slide-wrap">
           {current==="leaderboard" && <LeaderboardSlide key={`lb-${slideIdx}`} members={members} tiers={tiers}/>}
-          {current==="challenges"  && <ChallengesSlide  key={`ch-${slideIdx}`}/>}
+         {current==="challenges"  && <ChallengesSlide  key={`ch-${slideIdx}`} members={members}/>}
           {current==="activity"    && <ActivitySlide    key={`ac-${slideIdx}`} transactions={transactions}/>}
           {current==="spotlight"   && <SpotlightSlide   key={`sp-${slideIdx}`} members={members}/>}
         </div>
