@@ -122,3 +122,57 @@ export async function getDisplaySettings() {
 export async function saveDisplaySettings(settings) {
   await supabase.from('display_settings').upsert({ id: 'main', ...settings })
 }
+
+// ── CHALLENGE ENROLLMENTS ────────────────────────────────
+export async function getEnrollments() {
+  const { data } = await supabase.from('challenge_enrollments').select('*')
+  return (data || []).map(e => ({
+    ...e,
+    memberId: e.member_id,
+    memberName: e.member_name,
+    challengeId: e.challenge_id,
+    challengeName: e.challenge_name,
+    enrolledDate: e.enrolled_date,
+    completedDate: e.completed_date,
+  }))
+}
+export async function getMemberEnrollments(memberId) {
+  const { data } = await supabase.from('challenge_enrollments')
+    .select('*').eq('member_id', memberId)
+  return (data || []).map(e => ({
+    ...e,
+    memberId: e.member_id,
+    memberName: e.member_name,
+    challengeId: e.challenge_id,
+    challengeName: e.challenge_name,
+    enrolledDate: e.enrolled_date,
+    completedDate: e.completed_date,
+  }))
+}
+export async function enrollInChallenge(enrollment) {
+  await supabase.from('challenge_enrollments').insert({
+    id: enrollment.id,
+    challenge_id: enrollment.challengeId,
+    challenge_name: enrollment.challengeName,
+    member_id: enrollment.memberId,
+    member_name: enrollment.memberName,
+    progress: enrollment.progress || 0,
+    goal: enrollment.goal || 1,
+    completed: false,
+    enrolled_date: enrollment.enrolledDate,
+    completed_date: null,
+  })
+}
+export async function updateEnrollmentProgress(id, progress, completed, completedDate) {
+  await supabase.from('challenge_enrollments').update({
+    progress,
+    completed,
+    completed_date: completedDate || null,
+  }).eq('id', id)
+}
+export async function completeEnrollment(id, completedDate) {
+  await supabase.from('challenge_enrollments').update({
+    completed: true,
+    completed_date: completedDate,
+  }).eq('id', id)
+}
