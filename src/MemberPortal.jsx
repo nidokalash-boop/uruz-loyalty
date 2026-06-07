@@ -3,7 +3,8 @@ import {
   getMembers, getMemberByPhone, getMemberById, upsertMember,
   updateMemberPin, getTransactions, addTransaction,
   getRedemptions, addRedemption, getRewards, getTiers,
-  getMemberEnrollments, enrollInChallenge, updateEnrollmentProgress
+  getMemberEnrollments, enrollInChallenge, updateEnrollmentProgress,
+  getDisplaySettings
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&display=swap');`;
@@ -391,11 +392,13 @@ export default function MemberPortal() {
 
   const [displaySettings, setDisplaySettings] = useState(null);
 
-  const loadData = async (id) => {
+ const loadData = async (id) => {
     const mid = id||memberId;
-    const [m,t,r,rw,ti] = await Promise.all([
-      getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers()
+    const [m,t,r,rw,ti,ds] = await Promise.all([
+      getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers(),
+      getDisplaySettings()
     ]);
+    if(ds){try{setDisplaySettings(JSON.parse(ds.config||"{}"));}catch{}}
     const normalized = m.map(normalizeMember);
     setMembers(normalized); setTxns(t); setRdms(r);
     setRewards(rw.length ? rw : DEF_REWARDS);
