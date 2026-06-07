@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { getMembers, getTransactions, getTiers } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');`;
 
@@ -44,12 +45,7 @@ const DEF_CHALLENGES = [
 const SLIDES = ["leaderboard","challenges","activity","spotlight"];
 const SLIDE_DURATION = 12000;
 
-async function sload(key, fallback) {
-  try {
-    const val = localStorage.getItem(key);
-    return val ? JSON.parse(val) : fallback;
-  } catch { return fallback; }
-}
+
 
 function getTier(pts, tiers) {
   const s=[...tiers].sort((a,b)=>b.min-a.min);
@@ -310,15 +306,15 @@ export default function GymDisplay() {
   const clock = useClock();
 
   // Load live data from shared storage
-  const loadData = async () => {
+ const loadData = async () => {
     const [m,t,ti] = await Promise.all([
-      sload("uruz:members",     DEF_MEMBERS),
-      sload("uruz:transactions",DEF_TRANSACTIONS),
-      sload("uruz:tiers",       DEF_TIERS),
+      getMembers(),
+      getTransactions(),
+      getTiers(),
     ]);
-    if(m?.length) setMembers(m);
+    if(m?.length) setMembers(m.map(x=>({...x, points:x.points??0, streak:x.streak??0, status:x.status||"active"})));
     if(t?.length) setTxns(t);
-    if(ti?.length) setTiers(ti);
+    if(ti?.length) setTiers(ti.map(x=>({...x, min:x.min_pts??x.min??0})));
   };
 
   useEffect(()=>{ loadData(); },[]);
