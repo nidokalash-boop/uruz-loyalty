@@ -69,6 +69,7 @@ function normalizeMember(m) {
     status:      m.status      || "active",
     pin:         m.pin         || null,
     lastCheckin: m.last_checkin|| m.lastCheckin || null,
+    birthday:    m.birthday    || null,
   };
 }
 
@@ -388,7 +389,7 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
   const [search,setSearch]=useState("");
   const [showAdd,setShowAdd]=useState(false);
   const [selected,setSelected]=useState(null);
-  const [form,setForm]=useState({name:"",phone:"",email:"",status:"active"});
+  const [form,setForm]=useState({name:"",phone:"",email:"",status:"active",birthday:""});
   const [saving,setSaving]=useState(false);
   const canAdd=canAccess(role,"members")&&role!=="trainer";
   const filtered=members.filter(m=>m.name.toLowerCase().includes(search.toLowerCase())||m.phone.includes(search)||m.id.includes(search));
@@ -399,7 +400,7 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
     const nm={...form,id:genId("URZ"),joinDate:today(),points:0,checkins:0,streak:0,pin:null,lastCheckin:null};
     await upsertMember(nm);
     setMembers(prev=>[...prev,normalizeMember(nm)]);
-    setShowAdd(false);setForm({name:"",phone:"",email:"",status:"active"});setSaving(false);
+    setShowAdd(false);setForm({name:"",phone:"",email:"",status:"active",birthday:""});setSaving(false);
     toast("Member added");
   };
 
@@ -436,6 +437,7 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
         <div><label className="form-label">Tier</label><div style={{color:tier?.color,fontWeight:700}}>{tier?.icon} {tier?.name}</div></div>
         <div><label className="form-label">Phone</label><div className="mono">{sel.phone}</div></div>
         <div><label className="form-label">Joined</label><div className="mono" style={{color:C.muted}}>{sel.joinDate?fmtDate(sel.joinDate):"—"}</div></div>
+        <div><label className="form-label">Birthday</label><div className="mono" style={{color:C.muted}}>{sel.birthday||"—"}</div></div>
       </div>
       <div style={{marginBottom:16}}>
         <label className="form-label">Point History</label>
@@ -453,6 +455,7 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
       <div className="form-row"><label className="form-label">Full Name *</label><input className="form-input" placeholder="e.g. Alex Rivera" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
       <div className="form-row"><label className="form-label">Phone Number *</label><input className="form-input" placeholder="+961 XX XXX XXX" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></div>
       <div className="form-row"><label className="form-label">Email (optional)</label><input className="form-input" placeholder="member@email.com" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></div>
+      <div className="form-row"><label className="form-label">Birthday (optional)</label><input className="form-input" type="date" value={form.birthday||""} onChange={e=>setForm({...form,birthday:e.target.value})}/><div className="form-hint">Used to auto-award birthday bonus points</div></div>
     </Modal>)}
   </div>);
 }
