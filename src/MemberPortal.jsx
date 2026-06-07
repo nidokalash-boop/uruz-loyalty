@@ -4,7 +4,7 @@ import {
   updateMemberPin, getTransactions, addTransaction,
   getRedemptions, addRedemption, getRewards, getTiers,
   getMemberEnrollments, enrollInChallenge, getDisplaySettings,
-  getEarnRules
+  getEarnRules, addReferral, getMemberByReferralCode
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&display=swap');`;
@@ -74,7 +74,8 @@ function normalizeMember(m) {
     status:      m.status      || "active",
     pin:         m.pin         || null,
     lastCheckin: m.last_checkin|| m.lastCheckin || null,
-    birthday:    m.birthday    || null,
+    birthday:      m.birthday       || null,
+    referral_code: m.referral_code  || null,
   };
 }
 
@@ -231,6 +232,75 @@ function PinInput({ value, onChange, label }) {
   );
 }
 
+
+// ── TIER CELEBRATION ─────────────────────────────────────
+function TierCelebration({ tier, onDismiss }) {
+  return (
+    <div style={{
+      position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",
+      zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",
+      flexDirection:"column",padding:32,
+      animation:"fadein .4s ease"
+    }}>
+      <style>{`
+        @keyframes fadein{from{opacity:0;}to{opacity:1;}}
+        @keyframes bounce{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+        .confetti-wrap{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+        .confetti{position:absolute;width:8px;height:8px;border-radius:2px;animation:fall linear infinite;}
+        @keyframes fall{from{transform:translateY(-20px) rotate(0deg);opacity:1;}to{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+      `}</style>
+      <div className="confetti-wrap">
+        {[...Array(30)].map((_,i)=>(
+          <div key={i} className="confetti" style={{
+            left:`${Math.random()*100}%`,
+            background:["#F58020","#D4AF37","#026F91","#FFFDF3","#22C55E"][i%5],
+            animationDuration:`${1.5+Math.random()*2}s`,
+            animationDelay:`${Math.random()*2}s`,
+            width:`${6+Math.random()*8}px`,
+            height:`${6+Math.random()*8}px`,
+          }}/>
+        ))}
+      </div>
+      <div style={{
+        fontFamily:"'Bebas Neue',sans-serif",fontSize:80,
+        color:tier.color,lineHeight:1,textAlign:"center",
+        animation:"bounce 1s ease infinite",
+        marginBottom:8,
+      }}>{tier.icon}</div>
+      <div style={{
+        fontFamily:"'Bebas Neue',sans-serif",
+        fontSize:14,letterSpacing:6,
+        color:"#6B6866",textAlign:"center",marginBottom:8,
+        textTransform:"uppercase"
+      }}>You've reached</div>
+      <div style={{
+        fontFamily:"'Bebas Neue',sans-serif",
+        fontSize:72,letterSpacing:4,
+        color:tier.color,lineHeight:1,textAlign:"center",
+      }}>{tier.name}</div>
+      <div style={{
+        fontFamily:"'Bebas Neue',sans-serif",
+        fontSize:14,letterSpacing:3,
+        color:"#6B6866",textAlign:"center",marginTop:4,
+        textTransform:"uppercase"
+      }}>Tier</div>
+      <div style={{
+        fontSize:14,color:"#FFFDF3",textAlign:"center",
+        margin:"24px 0",fontWeight:500,lineHeight:1.6,
+        maxWidth:300,
+      }}>
+        You've earned your way to a new level. Keep pushing — every rep counts.
+      </div>
+      <button onClick={onDismiss} style={{
+        background:tier.color,border:"none",color:"#fff",
+        padding:"14px 40px",fontFamily:"'Montserrat',sans-serif",
+        fontSize:13,fontWeight:700,letterSpacing:2,
+        textTransform:"uppercase",cursor:"pointer",
+      }}>Let's Go! 💪</button>
+    </div>
+  );
+}
+
 function LoginFlow({ onLogin }) {
   const [stage,setStage]       = useState("phone");
   const [phone,setPhone]       = useState("");
@@ -239,9 +309,10 @@ function LoginFlow({ onLogin }) {
   const [pin2,setPin2]         = useState("");
   const [error,setError]       = useState("");
   const [loading,setLoading]   = useState(false);
-  const [regName,setRegName]       = useState("");
-  const [regPhone,setRegPhone]     = useState("");
-  const [regBirthday,setRegBirthday] = useState("");
+  const [regName,setRegName]           = useState("");
+  const [regPhone,setRegPhone]         = useState("");
+  const [regBirthday,setRegBirthday]   = useState("");
+  const [regRefCode,setRegRefCode]     = useState("");
 
   const handlePhone = async () => {
     setError(""); setLoading(true);
@@ -279,10 +350,42 @@ function LoginFlow({ onLogin }) {
     setLoading(true);
     const existing = await getMemberByPhone(regPhone);
     if(existing){setError("This number is already registered.");setLoading(false);return;}
-    const nm = { id:genId("URZ"), name:regName.trim(), phone:regPhone.trim(), email:"", joinDate:today(), points:0, checkins:0, streak:0, status:"active", pin:null, birthday:regBirthday||null };
+    // Generate referral code for new member
+    const newId = genId("URZ");
+    const refCode = "URUZ-" + newId.slice(-5).toUpperCase();
+    const nm = { id:newId, name:regName.trim(), phone:regPhone.trim(), email:"", joinDate:today(), points:0, checkins:0, streak:0, status:"active", pin:null, birthday:regBirthday||null, referral_code:refCode };
     await upsertMember(nm);
+
+    // Process referral if code provided
+    if (regRefCode.trim()) {
+      const referrer = await getMemberByReferralCode(regRefCode.trim());
+      if (referrer) {
+        const REF_PTS = 500;
+        await upsertMember({...referrer, points:(referrer.points||0)+REF_PTS});
+        await addReferral({
+          id: genId("REF"),
+          referrerId: referrer.id,
+          referrerName: referrer.name,
+          referrerCode: regRefCode.trim(),
+          newMemberId: nm.id,
+          newMemberName: nm.name,
+          pts: REF_PTS,
+          date: today(),
+        });
+        await addTransaction({
+          id: genId("TXN"),
+          memberId: referrer.id,
+          memberName: referrer.name,
+          type: "referral",
+          pts: REF_PTS,
+          note: `Referral — ${nm.name}`,
+          date: today(),
+        });
+      }
+    }
+
     setLoading(false);
-    setMember(nm); setPin(""); setStage("setpin");
+    setMember({...nm, referral_code:refCode}); setPin(""); setStage("setpin");
   };
 
   const LogoBox = () => (
@@ -347,6 +450,8 @@ function LoginFlow({ onLogin }) {
             <input className="inp" placeholder="+961 XX XXX XXX" value={regPhone} onChange={e=>setRegPhone(e.target.value)}/>
             <label className="lbl">Birthday (optional)</label>
             <input className="inp" type="date" value={regBirthday} onChange={e=>setRegBirthday(e.target.value)} style={{marginBottom:14}}/>
+            <label className="lbl">Referral Code (optional)</label>
+            <input className="inp" placeholder="e.g. URUZ-ABC12" value={regRefCode} onChange={e=>setRegRefCode(e.target.value.toUpperCase())} style={{marginBottom:14}}/>
             {error&&<div className="err">{error}</div>}
             <button className="btn btn-primary" onClick={handleRegister} disabled={loading}>{loading?"Creating...":"Create Account"}</button>
             <button className="btn btn-ghost" onClick={()=>{setStage("phone");setError("");}}>Back to Sign In</button>
@@ -478,6 +583,7 @@ export default function MemberPortal() {
   const [tab,setTab]             = useState("activity");
   const [loaded,setLoaded]       = useState(false);
   const [toast,setToast]         = useState({msg:"",on:false});
+  const [tierCelebration,setTierCelebration] = useState(null);
 
   const showToast = msg => { setToast({msg,on:true}); setTimeout(()=>setToast(t=>({...t,on:false})),2600); };
 
@@ -502,6 +608,26 @@ export default function MemberPortal() {
     const found = normalized.find(x=>x.id===mid);
     setMember(found||null);
     setLoaded(true);
+
+    // Check for tier upgrade since last visit
+    if (found) {
+      const tierKey = `uruz:tier:${found.id}`;
+      const lastTier = localStorage.getItem(tierKey);
+      const currentTier = [...(ti.length?ti:DEF_TIERS)].sort((a,b)=>b.min-a.min).find(t=>found.points>=t.min);
+      if (currentTier && lastTier && lastTier !== currentTier.name) {
+        setTierCelebration(currentTier);
+      }
+      if (currentTier) localStorage.setItem(tierKey, currentTier.name);
+    }
+
+    // Generate referral code if member doesn't have one
+    if (found && !found.referral_code) {
+      const refCode = "URUZ-" + found.id.slice(-5).toUpperCase();
+      await upsertMember({...found, referral_code: refCode});
+      const updatedM = normalized.map(x => x.id===found.id ? {...x, referral_code:refCode} : x);
+      setMembers(updatedM);
+      setMember({...found, referral_code:refCode});
+    }
 
     // Auto-award birthday bonus if today is their birthday
     if (found && found.birthday) {
@@ -570,6 +696,7 @@ export default function MemberPortal() {
               </div>
               <div className="member-name">{member.name}</div>
               <div className="member-meta">Member since {new Date(member.joinDate).toLocaleDateString("en-GB",{month:"short",year:"numeric"})} · {member.id}</div>
+              {member.referral_code && <div style={{fontSize:11,color:"#F58020",marginTop:3,fontWeight:700,letterSpacing:1}}>Referral: {member.referral_code}</div>}
             </div>
             <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
               <div className="tier-badge" style={{color:tier.color,borderColor:tier.color,background:`${tier.color}18`}}>{tier.icon} {tier.name}</div>
@@ -596,6 +723,7 @@ export default function MemberPortal() {
           {tab==="leaderboard"&&<LeaderboardTab members={members} memberId={member.id}/>}
         </div>
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
+        {tierCelebration && <TierCelebration tier={tierCelebration} onDismiss={()=>setTierCelebration(null)}/>}
       </div>
     </>
   );
