@@ -281,8 +281,8 @@ function LoginFlow({ onLogin }) {
       <div className="screen">
         {stage==="phone"&&(
           <div className="box">
-            <div className="brand">URUZ</div>
-            <div className="brand-sub">Loyalty Program</div>
+            <img src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" alt="URUZ" style={{height:48,marginBottom:6}}/>
+<div className="brand-sub">Loyalty Program</div>
             <div className="divider"/>
             <div className="step-title">Welcome Back</div>
             <label className="lbl">Your Phone Number</label>
@@ -294,7 +294,8 @@ function LoginFlow({ onLogin }) {
         )}
         {stage==="pin"&&member&&(
           <div className="box">
-            <div className="brand">URUZ</div><div className="brand-sub">Loyalty Program</div><div className="divider"/>
+            <img src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" alt="URUZ" style={{height:48,marginBottom:6}}/>
+<div className="brand-sub">Loyalty Program</div><div className="brand-sub">Loyalty Program</div><div className="divider"/>
             <div className="member-chip">
               <div className="chip-av">{initials(member.name)}</div>
               <div><div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div><div style={{fontSize:11,color:"#6B6866"}}>{member.phone}</div></div>
@@ -306,7 +307,8 @@ function LoginFlow({ onLogin }) {
         )}
         {stage==="setpin"&&member&&(
           <div className="box">
-            <div className="brand">URUZ</div><div className="brand-sub">Set Up Your PIN</div><div className="divider"/>
+           <img src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" alt="URUZ" style={{height:48,marginBottom:6}}/>
+<div className="brand-sub">Loyalty Program</div><div className="brand-sub">Set Up Your PIN</div><div className="divider"/>
             <div className="step-title">Create Your PIN</div>
             <PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Choose a 4-digit PIN to secure your account"/>
             {error&&<div className="err">{error}</div>}
@@ -315,7 +317,8 @@ function LoginFlow({ onLogin }) {
         )}
         {stage==="confirmpin"&&(
           <div className="box">
-            <div className="brand">URUZ</div><div className="brand-sub">Confirm Your PIN</div><div className="divider"/>
+            <img src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" alt="URUZ" style={{height:48,marginBottom:6}}/>
+<div className="brand-sub">Loyalty Program</div><div className="brand-sub">Confirm Your PIN</div><div className="divider"/>
             <div className="step-title">Confirm PIN</div>
             <PinInput value={pin2} onChange={v=>{setPin2(v);setError("");}} label="Enter your PIN again to confirm"/>
             {error&&<div className="err">{error}</div>}
@@ -323,7 +326,8 @@ function LoginFlow({ onLogin }) {
         )}
         {stage==="register"&&(
           <div className="box">
-            <div className="brand">URUZ</div><div className="brand-sub">Join the Movement</div><div className="divider"/>
+           <img src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" alt="URUZ" style={{height:48,marginBottom:6}}/>
+<div className="brand-sub">Loyalty Program</div><div className="brand-sub">Join the Movement</div><div className="divider"/>
             <div className="step-title">New Member</div>
             <div className="step-sub">Register to start earning points from day one</div>
             <label className="lbl">Full Name</label>
@@ -420,7 +424,8 @@ export default function MemberPortal() {
 
   if(!memberId) return <LoginFlow onLogin={handleLogin}/>;
   if(!loaded) return (<><style>{CSS}</style><div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#1F2020"}}><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:4,color:"#F58020"}}>LOADING…</div></div></>);
-  if(!member) return (<><style>{CSS}</style><div className="screen"><div className="box"><div className="brand">URUZ</div><div className="brand-sub">Loyalty Program</div><div className="divider"/><div className="step-title">Account Not Found</div><div className="step-sub">Your account could not be loaded. Please sign in again or contact the front desk.</div><button className="btn btn-primary" onClick={handleLogout}>Back to Sign In</button></div></div></>);
+  if(!member) return (<><style>{CSS}</style><div className="screen"><div className="box"><img src="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png" alt="URUZ" style={{height:48,marginBottom:6}}/>
+<div className="brand-sub">Loyalty Program</div><div className="brand-sub">Loyalty Program</div><div className="divider"/><div className="step-title">Account Not Found</div><div className="step-sub">Your account could not be loaded. Please sign in again or contact the front desk.</div><button className="btn btn-primary" onClick={handleLogout}>Back to Sign In</button></div></div></>);
 
   const tier=getTier(member.points,tiers);
   const next=getNext(member.points,tiers);
