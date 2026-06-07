@@ -189,3 +189,32 @@ export async function upsertEarnRule(rule) {
 export async function deleteEarnRule(id) {
   await supabase.from('earn_rules').delete().eq('id', id)
 }
+
+// ── REFERRALS ────────────────────────────────────────────
+export async function getReferrals() {
+  const { data } = await supabase.from('referrals').select('*').order('date', { ascending: false })
+  return (data || []).map(r => ({
+    ...r,
+    referrerId: r.referrer_id,
+    referrerName: r.referrer_name,
+    referrerCode: r.referrer_code,
+    newMemberId: r.new_member_id,
+    newMemberName: r.new_member_name,
+  }))
+}
+export async function addReferral(ref) {
+  await supabase.from('referrals').insert({
+    id: ref.id,
+    referrer_id: ref.referrerId,
+    referrer_name: ref.referrerName,
+    referrer_code: ref.referrerCode,
+    new_member_id: ref.newMemberId,
+    new_member_name: ref.newMemberName,
+    pts: ref.pts || 500,
+    date: ref.date,
+  })
+}
+export async function getMemberByReferralCode(code) {
+  const { data } = await supabase.from('members').select('*').ilike('referral_code', code).single()
+  return data || null
+}
