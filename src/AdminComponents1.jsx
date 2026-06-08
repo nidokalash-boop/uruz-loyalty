@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { upsertMember, updateMemberStatus, resetMemberPin, updateRedemptionStatus, addTransaction } from "./supabase";
+import { upsertMember, updateRedemptionStatus, addTransaction } from "./supabase";
 
 const C = {
   orange:"#F58020", cerulean:"#026F91", white:"#FFFDF3", black:"#1F2020",
@@ -11,8 +11,9 @@ const C = {
 function today() { return new Date().toISOString().slice(0,10); }
 function genId(p) { return `${p}-${Math.floor(10000+Math.random()*90000)}`; }
 function initials(n) { return (n||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
+function getTierFn(pts, tiers) { return [...tiers].sort((a,b)=>b.min-a.min).find(t=>pts>=t.min)||tiers[0]; }
 
-function PinInput({ value, onChange }) {
+export function PinInput({ value, onChange }) {
   const keys = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
   return (
     <div>
@@ -25,11 +26,11 @@ function PinInput({ value, onChange }) {
   );
 }
 
-function Modal({title,onClose,children,footer}){
+export function Modal({title,onClose,children,footer}){
   return(<div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal"><div className="modal-hdr"><div className="modal-title">{title}</div><button className="modal-close" onClick={onClose}>✕</button></div><div className="modal-body">{children}</div>{footer&&<div className="modal-footer">{footer}</div>}</div></div>);
 }
 
-function AdminLogin({ onLogin, staffList }) {
+export function AdminLogin({ onLogin, staffList }) {
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
   const [stage, setStage] = useState("name");
@@ -39,21 +40,19 @@ function AdminLogin({ onLogin, staffList }) {
     <div className="login-wrap">
       <div className="login-box">
         <div className="login-brand">URUZ</div>
-        <div className="login-sub">Administrative Node Interface</div>
+        <div className="login-sub">Administrative System Gateway</div>
         <div className="login-divider"/>
         {stage==="name" ? (
           <div>
-            <input className="login-inp" placeholder="Operator Identity String" value={name} onChange={e=>setName(e.target.value)}/>
+            <input className="login-inp" placeholder="Operator Staff Handle" value={name} onChange={e=>setName(e.target.value)}/>
             <button className="login-btn" onClick={()=>{
               const f = staffList.find(s=>s.name.toLowerCase()===name.trim().toLowerCase());
               if(f) { setSelStaff(f); setStage("pin"); }
-            }}>Query Identity</button>
+            }}>Verify Handle</button>
           </div>
         ) : (
           <div>
-            <PinInput value={pin} onChange={async(v)=>{
-              setPin(v); if(v.length===4 && v===selStaff.pin) onLogin(selStaff);
-            }}/>
+            <PinInput value={pin} onChange={(v)=>{setPin(v); if(v.length===4 && v===selStaff.pin) onLogin(selStaff);}}/>
           </div>
         )}
       </div>
@@ -61,68 +60,77 @@ function AdminLogin({ onLogin, staffList }) {
   );
 }
 
-function Dashboard({members,transactions,redemptions}){
+export function Dashboard({members, transactions, redemptions}){
   return(
-    <div style={{padding:10}}>
+    <div>
       <div className="stat-grid">
-        <div className="stat-card" style={{"--accent":C.orange}}><div className="stat-val">{members.filter(m=>m.status==="active").length}</div><div className="stat-lbl">Active Node Members</div></div>
-        <div className="stat-card" style={{"--accent":C.cerulean}}><div className="stat-val">{redemptions.filter(r=>r.status==="pending").length}</div><div className="stat-lbl">Pending System Claims</div></div>
+        <div className="stat-card" style={{"--accent":C.orange}}><div className="stat-val">{members.filter(m=>m.status==="active").length}</div><div className="stat-lbl">Active Sync Devices</div></div>
+        <div className="stat-card" style={{"--accent":C.cerulean}}><div className="stat-val">{redemptions.filter(r=>r.status==="pending").length}</div><div className="stat-lbl">Awaiting Releases</div></div>
       </div>
     </div>
   );
 }
 
-function Members({members,setMembers,onAward,toast}){
+export function Members({members, setMembers, tiers, onAward}){
   return(
     <div className="tbl-wrap">
       <table>
-        <thead><tr><th>Target Name Block</th><th>Points Status Metric</th><th>Actions Matrix Control</th></tr></thead>
+        <thead><tr><th>User Core Label</th><th>Tier Range</th><th>Metric Score</th><th>Parameters Modification</th></tr></thead>
         <tbody>
-          {members.map(m=>(
-            <tr key={m.id}>
-              <td>{m.name}</td>
-              <td style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:C.orange}}>{m.points}</td>
-              <td><button className="btn btn-ghost btn-sm" onClick={()=>onAward(m)}>Modify Metric Parameter</button></td>
-            </tr>
-          ))}
+          {members.map(m=>{
+            const t = getTierFn(m.points, tiers);
+            return (
+              <tr key={m.id}>
+                <td style={{fontWeight:600}}>{m.name}</td>
+                <td><span style={{color:t.color, fontWeight:700}}>{t.name}</span></td>
+                <td style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:C.orange}}>{m.points.toLocaleString()}</td>
+                <td><button className="btn btn-ghost btn-sm" onClick={()=>onAward(m)}>Modify Data Bounds</button></td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
 
-function AwardPoints({members,setMembers,setTransactions,preSelected,toast}){
-  const [pts,setPts] = useState("");
+export function AwardPoints({members, setMembers, setTransactions, preSelected, toast}){
+  const [pts, setPts] = useState("");
   return (
     <div style={{maxWidth:400}}>
       <div className="form-row">
-        <label className="form-label">Active Node Value Target: {preSelected?.name}</label>
-        <input className="form-input" type="number" value={pts} onChange={e=>setPts(e.target.value)} placeholder="Integer Scale Value"/>
+        <label className="form-label">Active Targeted Profile Object: {preSelected?.name}</label>
+        <input className="form-input" type="number" value={pts} onChange={e=>setPts(e.target.value)} placeholder="Incremental Integer Modifier"/>
       </div>
       <button className="btn btn-primary" onClick={async()=>{
         if(!preSelected || !pts) return;
-        const targetPts = Math.max(0, preSelected.points + Number(pts));
-        await upsertMember({...preSelected, points: targetPts});
-        setMembers(prev=>prev.map(x=>x.id===preSelected.id ? {...x, points:targetPts}:x));
-        toast("Matrix Parameter Modulated Successfully");
-      }}>Commit Parameter Update</button>
+        const targetVal = Math.max(0, preSelected.points + Number(pts));
+        await upsertMember({...preSelected, points: targetVal});
+        setMembers(p=>p.map(x=>x.id===preSelected.id ? {...x, points:targetVal}:x));
+        const txn={id:genId("TXN"), memberId:preSelected.id, memberName:preSelected.name, type:"manual", pts:Number(pts), note:"Front Desk Adjust", date:today()};
+        await addTransaction(txn); setTransactions(p=>[txn,...p]);
+        toast("State Variable Overwritten Successfully");
+      }}>Execute Array Re-Indexing</button>
     </div>
   );
 }
 
-function Redemptions({redemptions,setRedemptions,setMembers,setTransactions,toast}){
+export function Redemptions({redemptions, setRedemptions, setMembers, setTransactions, toast}){
   return (
     <div className="tbl-wrap">
       <table>
-        <thead><tr><th>User Block Identity</th><th>Reward Component Required</th><th>Actions Processing</th></tr></thead>
+        <thead><tr><th>Member Profile Node</th><th>Component Track Required</th><th>Operations Authorization</th></tr></thead>
         <tbody>
           {redemptions.filter(r=>r.status==="pending").map(r=>(
             <tr key={r.id}>
-              <td>{r.memberName}</td>
+              <td style={{fontWeight:600}}>{r.memberName}</td>
               <td>{r.reward}</td>
               <td><button className="btn btn-success btn-sm" onClick={async()=>{
                 await updateRedemptionStatus(r.id, "fulfilled");
                 setRedemptions(p=>p.map(x=>x.id===r.id?{...x,status:"fulfilled"}:x));
+                setMembers(m=>m.map(x=>x.id===r.memberId?{...x,points:Math.max(0, x.points-r.pts)}:x));
+                const txn={id:genId("TXN"), memberId:r.memberId, memberName:r.memberName, type:"redeem", pts:-r.pts, note:`Released: ${r.reward}`, date:today()};
+                await addTransaction(txn); setTransactions(p=>[txn,...p]);
                 toast("Asset Authorized and Released");
               }}>Release Components</button></td>
             </tr>
@@ -133,24 +141,24 @@ function Redemptions({redemptions,setRedemptions,setMembers,setTransactions,toas
   );
 }
 
-function RewardsCatalog({rewards}){
+export function RewardsCatalog({rewards}){
   return (
     <div className="reward-grid">
       {rewards.map(r=>(
         <div key={r.id} className="rwd-card">
-          <div className="rwd-name">{r.name}</div>
-          <div className="rwd-pts">{r.pts} <span style={{fontSize:12,color:C.muted}}>PTS</span></div>
+          <div style={{fontWeight:700, color:C.white}}>{r.name}</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:C.orange, marginTop:6}}>{r.pts} <span style={{fontSize:12, color:C.muted}}>PTS</span></div>
         </div>
       ))}
     </div>
   );
 }
 
-function StaffManagement({staffList}){
+export function StaffManagement({staffList}){
   return (
     <div className="tbl-wrap">
       <table>
-        <thead><tr><th>Operator Node Name</th><th>System Authority State</th></tr></thead>
+        <thead><tr><th>Operator Core Name String</th><th>Security Access Clearance</th></tr></thead>
         <tbody>
           {staffList.map(s=>(<tr key={s.id}><td>{s.name}</td><td><span className="badge badge-active">{s.role.toUpperCase()}</span></td></tr>))}
         </tbody>
@@ -159,12 +167,6 @@ function StaffManagement({staffList}){
   );
 }
 
-function BulkImport() {
-  return (
-    <div style={{textAlign:"center", padding:40}}>
-      <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:C.white}}>Data Influx Registry Portal Node</div>
-    </div>
-  );
+export function BulkImport() {
+  return <div style={{textAlign:"center", padding:40}}><div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:C.white}}>Automated Pipeline Integration Influx Terminal</div></div>;
 }
-
-export { PinInput, Modal, AdminLogin, Dashboard, Members, AwardPoints, Redemptions, RewardsCatalog, StaffManagement, BulkImport };
