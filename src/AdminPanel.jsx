@@ -26,29 +26,48 @@ const C = {
   gold:"#D4AF37", silver:"#A8A9AD", bronze:"#CD7F32", iron:"#6B7280",
 };
 
+// Premium Shared Vector Icons
+const ICONS = {
+  dashboard: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>,
+  members: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  award: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  redemptions: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="14" x2="6" y2="14"/><line x1="18" y1="14" x2="18" y2="14"/></svg>,
+  rewards: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>,
+  staff: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  display: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+  workouts: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18.5 5.5 3 3"/><path d="m2.5 15.5 3 3"/><path d="M14 5s0-2-3-2-3 2-3 2"/><path d="M10 19s0 2 3 2 3-2 3-2"/></svg>,
+  challenges: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></svg>,
+  earn: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  referrals: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  export: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  import: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  settings: (color = "currentColor") => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+};
+
 const DEF_TIERS = [
-  { id:"t1", name:"Iron",   min:0,     color:C.iron,    icon:"⚙" },
-  { id:"t2", name:"Bronze", min:1000,  color:C.bronze,  icon:"🔶" },
-  { id:"t3", name:"Silver", min:2500,  color:C.silver,  icon:"⬡" },
-  { id:"t4", name:"Gold",   min:5000,  color:C.gold,    icon:"◆" },
-  { id:"t5", name:"Elite",  min:10000, color:C.cerulean,icon:"★" },
+  { id:"t1", name:"Iron",   min:0,     color:C.iron },
+  { id:"t2", name:"Bronze", min:1000,  color:C.bronze },
+  { id:"t3", name:"Silver", min:2500,  color:C.silver },
+  { id:"t4", name:"Gold",   min:5000,  color:C.gold },
+  { id:"t5", name:"Elite",  min:10000, color:C.cerulean },
 ];
+
 const DEF_REWARDS = [
-  { id:"RWD-001", name:"Guest Day Pass",         pts:300,  cat:"Access",   icon:"🎟", stock:true  },
-  { id:"RWD-002", name:"URUZ Shaker Bottle",     pts:500,  cat:"Merch",    icon:"🥤", stock:true  },
-  { id:"RWD-003", name:"1-Month Locker Rental",  pts:750,  cat:"Access",   icon:"🔐", stock:true  },
-  { id:"RWD-004", name:"URUZ Premium Tee",       pts:900,  cat:"Merch",    icon:"👕", stock:true  },
-  { id:"RWD-005", name:"Free Personal Training", pts:1500, cat:"Training", icon:"🏋", stock:true  },
-  { id:"RWD-006", name:"1-Month Membership",     pts:3000, cat:"Access",   icon:"⚡", stock:true  },
-  { id:"RWD-007", name:"URUZ Hoodie",            pts:1200, cat:"Merch",    icon:"🧥", stock:false },
-  { id:"RWD-008", name:"Nutrition Consult",      pts:800,  cat:"Training", icon:"🥗", stock:true  },
+  { id:"RWD-001", name:"Guest Day Pass",         pts:300,  cat:"Access",   stock:true  },
+  { id:"RWD-002", name:"URUZ Shaker Bottle",     pts:500,  cat:"Merch",    stock:true  },
+  { id:"RWD-003", name:"1-Month Locker Rental",  pts:750,  cat:"Access",   stock:true  },
+  { id:"RWD-004", name:"URUZ Premium Tee",       pts:900,  cat:"Merch",    stock:true  },
+  { id:"RWD-005", name:"Free Personal Training", pts:1500, cat:"Training", stock:true  },
+  { id:"RWD-006", name:"1-Month Membership",     pts:3000, cat:"Access",   stock:true  },
+  { id:"RWD-007", name:"URUZ Hoodie",            pts:1200, cat:"Merch",    stock:false },
+  { id:"RWD-008", name:"Nutrition Consult",      pts:800,  cat:"Training", stock:true  },
 ];
 
 const ROLES = {
-  owner:      { label:"Owner",      color:"#F58020", icon:"👑", level:4 },
-  manager:    { label:"Manager",    color:"#D4AF37", icon:"⭐", level:3 },
-  front_desk: { label:"Front Desk", color:"#026F91", icon:"🔑", level:2 },
-  trainer:    { label:"Trainer",    color:"#22C55E", icon:"💪", level:1 },
+  owner:      { label:"Owner",      color:"#F58020", level:4 },
+  manager:    { label:"Manager",    color:"#D4AF37", level:3 },
+  front_desk: { label:"Front Desk", color:"#026F91", level:2 },
+  trainer:    { label:"Trainer",    color:"#22C55E", level:1 },
 };
 
 const PERMISSIONS = {
@@ -64,19 +83,19 @@ function canAccess(role, page) {
 
 function normalizeMember(m) {
   return {
-    id:          m.id,
-    name:        m.name        || "",
-    phone:       m.phone       || "",
-    email:       m.email       || "",
-    joinDate:    m.join_date   || m.joinDate || "",
-    points:      m.points      ?? 0,
-    checkins:    m.checkins    ?? 0,
-    streak:      m.streak      ?? 0,
-    status:      m.status      || "active",
-    pin:         m.pin         || null,
-    lastCheckin:   m.last_checkin   || m.lastCheckin   || null,
-    birthday:      m.birthday       || null,
-    referral_code: m.referral_code  || null,
+    id:            m.id,
+    name:          m.name          || "",
+    phone:         m.phone         || "",
+    email:         m.email         || "",
+    joinDate:      m.join_date     || m.joinDate || "",
+    points:        m.points        ?? 0,
+    checkins:      m.checkins      ?? 0,
+    streak:        m.streak        ?? 0,
+    status:        m.status        || "active",
+    pin:           m.pin           || null,
+    lastCheckin:   m.last_checkin  || m.lastCheckin  || null,
+    birthday:      m.birthday      || null,
+    referral_code: m.referral_code || null,
   };
 }
 
@@ -106,14 +125,14 @@ html,body,#root{height:100%;background:#1F2020;color:#FFFDF3;font-family:'Montse
 .sb-sub{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#6B6866;font-weight:700;margin-top:2px;}
 .sb-nav{flex:1;padding:10px 0;overflow-y:auto;}
 .sb-section{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;font-weight:700;padding:12px 18px 6px;}
-.sb-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 18px;background:none;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:600;color:#6B6866;text-align:left;transition:all .15s;}
+.sb-btn{display:flex;align-items:center;gap:12px;width:100%;padding:10px 18px;background:none;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:600;color:#6B6866;text-align:left;transition:all .15s;}
 .sb-btn:hover{color:#FFFDF3;background:rgba(255,255,255,.04);}
 .sb-btn.on{color:#F58020;background:rgba(245,128,32,.1);border-left:2px solid #F58020;}
 .sb-btn:disabled{opacity:0.3;cursor:not-allowed;}
-.sb-icon{font-size:15px;width:18px;text-align:center;}
+.sb-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;}
 .sb-footer{padding:14px 18px;border-top:1px solid #333435;}
 .sb-staff-name{color:#FFFDF3;font-weight:700;font-size:13px;}
-.sb-staff-role{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-top:2px;}
+.sb-staff-role{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-top:4px;display:flex;align-items:center;gap:4px;}
 .sb-logout{width:100%;margin-top:10px;padding:7px;background:none;border:1px solid #333435;color:#6B6866;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
 .sb-logout:hover{border-color:#EF4444;color:#EF4444;}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -210,7 +229,7 @@ tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
 .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
 .role-card{padding:14px;background:#2A2B2C;border:1px solid #333435;cursor:pointer;text-align:center;transition:all .15s;}
 .role-card:hover,.role-card.sel{border-color:#F58020;background:rgba(245,128,32,.08);}
-.role-icon{font-size:24px;display:block;margin-bottom:6px;}
+.role-icon-wrap{font-size:24px;display:block;margin-bottom:6px;color:#F58020;}
 .role-name{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
 .pin-row{display:flex;gap:10px;justify-content:center;margin-bottom:20px;}
 .pin-digit{width:52px;height:64px;background:#2A2B2C;border:1px solid #333435;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:32px;color:#F58020;transition:border-color .15s;}
@@ -239,23 +258,21 @@ tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
 ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:#1F2020;}::-webkit-scrollbar-thumb{background:#333435;}
 `;
 
-
-// ── ROOT ──────────────────────────────────────────────────
 const ALL_NAV=[
-  {id:"dashboard",  icon:"◉", label:"Dashboard"},
-  {id:"members",    icon:"⊞", label:"Members"},
-  {id:"award",      icon:"◆", label:"Award Points"},
-  {id:"redemptions",icon:"🎟", label:"Redemptions"},
-  {id:"rewards",    icon:"⭐", label:"Rewards"},
-  {id:"staff",      icon:"👥", label:"Staff"},
-  {id:"display",    icon:"📺", label:"TV Display"},
-  {id:"workouts",   icon:"💪", label:"Workouts"},
-  {id:"challenges", icon:"⚔",  label:"Challenges"},
-  {id:"earn",       icon:"💰", label:"Earn Rules"},
-  {id:"referrals",  icon:"👥", label:"Referrals"},
-  {id:"export",     icon:"⬇", label:"Export Data"},
-  {id:"import",     icon:"↑", label:"Bulk Import"},
-  {id:"settings",   icon:"⚙", label:"Settings"},
+  {id:"dashboard",  icon: ICONS.dashboard,   label:"Dashboard"},
+  {id:"members",    icon: ICONS.members,     label:"Members"},
+  {id:"award",      icon: ICONS.award,       label:"Award Points"},
+  {id:"redemptions",icon: ICONS.redemptions,  label:"Redemptions"},
+  {id:"rewards",    icon: ICONS.rewards,     label:"Rewards"},
+  {id:"staff",      icon: ICONS.staff,       label:"Staff"},
+  {id:"display",    icon: ICONS.display,     label:"TV Display"},
+  {id:"workouts",   icon: ICONS.workouts,    label:"Workouts"},
+  {id:"challenges", icon: ICONS.challenges,  label:"Challenges"},
+  {id:"earn",       icon: ICONS.earn,        label:"Earn Rules"},
+  {id:"referrals",  icon: ICONS.referrals,   label:"Referrals"},
+  {id:"export",     icon: ICONS.export,      label:"Export Data"},
+  {id:"import",     icon: ICONS.import,      label:"Bulk Import"},
+  {id:"settings",   icon: ICONS.settings,    label:"Settings"},
 ];
 
 export default function AdminPanel(){
@@ -270,7 +287,6 @@ export default function AdminPanel(){
   const [awardTarget,setAwardTarget]   = useState(null);
   const [loaded,setLoaded]             = useState(false);
   const [toast,showToast]              = useToast();
-
   const [displaySettings, setDisplaySettings] = useState(null);
 
   useEffect(()=>{
@@ -287,14 +303,14 @@ export default function AdminPanel(){
       setMembers(m.map(normalizeMember));setTxns(t);setRdms(r);
       setRewards(rw.length?rw:DEF_REWARDS);
       setTiers(ti.length?ti:DEF_TIERS);
-      if(ds){try{setDisplaySettings({...DEF_DISPLAY,...JSON.parse(ds.config||"{}")});}catch{}}
+     
+      if(ds){try{setDisplaySettings({...JSON.parse(ds.config||"{}")});}catch{}}
       setLoaded(true);
     })();
   },[]);
 
   const handleLogin=(session)=>{
     setStaffSession(session);
-    // reload staff list after potential first-time setup
     getStaff().then(setStaffList);
   };
 
@@ -318,17 +334,31 @@ export default function AdminPanel(){
           <div className="sb-brand"><div className="sb-logo">URUZ</div><div className="sb-sub">Member Central</div></div>
           <div className="sb-nav">
             <div className="sb-section">Navigation</div>
-            {visibleNav.map(n=>(<button key={n.id} className={`sb-btn${page===n.id?" on":""}`} onClick={()=>setPage(n.id)}><span className="sb-icon">{n.icon}</span>{n.label}{n.id==="redemptions"&&pending>0&&<span style={{marginLeft:"auto",background:C.danger,color:"#fff",fontSize:10,fontWeight:800,padding:"1px 6px"}}>{pending}</span>}</button>))}
+            {visibleNav.map(n=>{
+              const isActive = page===n.id;
+              return (
+                <button key={n.id} className={`sb-btn${isActive?" on":""}`} onClick={()=>setPage(n.id)}>
+                  <span className="sb-icon">{n.icon(isActive ? C.orange : "#6B6866")}</span>
+                  {n.label}
+                  {n.id==="redemptions"&&pending>0&&<span style={{marginLeft:"auto",background:C.danger,color:"#fff",fontSize:10,fontWeight:800,padding:"1px 6px"}}>{pending}</span>}
+                </button>
+              );
+            })}
           </div>
+       
           <div className="sb-footer">
             <div className="sb-staff-name">{staffSession.name}</div>
-            <div className="sb-staff-role" style={{color:roleInfo?.color}}>{roleInfo?.icon} {roleInfo?.label}</div>
+            <div className="sb-staff-role" style={{color:roleInfo?.color || C.white}}>
+              <span style={{marginRight:4, display:"inline-flex", alignItems:"center"}}>{ICONS.profile(roleInfo?.color || C.white, 12)}</span>
+              {roleInfo?.label}
+            </div>
             <button className="sb-logout" onClick={handleLogout}>Sign Out</button>
           </div>
         </div>
         <div className="main">
           <div className="topbar">
             <div className="topbar-title">{ALL_NAV.find(n=>n.id===page)?.label}</div>
+  
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:C.success}}/>
               <div className="topbar-date">{new Date().toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</div>
