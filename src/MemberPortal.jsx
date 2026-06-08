@@ -557,14 +557,17 @@ const URUZ_QUOTES = [
   "Built different. Trained harder.",
 ];
 
-function HomeTab({ member, members, transactions, tiers, challenges, enrollments, workouts, onTabChange }) {
+function HomeTab({ member, members, transactions, tiers, challenges, enrollments, workouts, onTabChange, homeMessages }) {
   const tier = getTier(member.points, tiers);
   const next = getNext(member.points, tiers);
   const tierPct = next ? Math.round(((member.points-tier.min)/(next.min-tier.min))*100) : 100;
   const rank = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).findIndex(m=>m.id===member.id)+1;
   const myTxns = transactions.filter(t=>t.memberId===member.id||t.member_id===member.id).slice(0,3);
   const myEnrollments = enrollments.filter(e=>(e.memberId===member.id||e.member_id===member.id)&&!e.completed);
-  const quote = URUZ_QUOTES[new Date().getDay() % URUZ_QUOTES.length];
+  const msgs = homeMessages && homeMessages.length > 0 ? homeMessages : URUZ_QUOTES;
+  const quote = msgs[new Date().getDay() % msgs.length];
+  const todayMMDD = new Date().toISOString().slice(5,10);
+  const isBirthday = member.birthday && member.birthday.slice(5,10) === todayMMDD;
   const newWorkouts = workouts.filter(w=>w.active&&(w.access_type==="free")).slice(0,2);
   const featuredChallenge = challenges.find(c=>!myEnrollments.find(e=>e.challengeId===String(c.id))) || null;
 
@@ -617,11 +620,19 @@ function HomeTab({ member, members, transactions, tiers, challenges, enrollments
         </div>
       </div>
 
-      {/* Motivational Quote */}
-      <div style={{margin:"0 20px",background:"linear-gradient(135deg,rgba(245,128,32,.12),rgba(2,111,145,.12))",border:"1px solid rgba(245,128,32,.2)",padding:"16px 18px"}}>
-        <div style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#F58020",fontWeight:700,marginBottom:6}}>Today's Mindset</div>
-        <div style={{fontSize:14,color:"#FFFDF3",lineHeight:1.6,fontWeight:500,fontStyle:"italic"}}>"{quote}"</div>
-      </div>
+      {/* Birthday or Motivational Quote */}
+      {isBirthday ? (
+        <div style={{margin:"0 20px",background:"linear-gradient(135deg,rgba(245,128,32,.2),rgba(212,175,55,.15))",border:"1px solid rgba(245,128,32,.5)",padding:"16px 18px",textAlign:"center"}}>
+          <div style={{fontSize:36,marginBottom:6}}>🎂</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,letterSpacing:2,color:"#F58020",marginBottom:4}}>Happy Birthday, {member.name.split(" ")[0]}!</div>
+          <div style={{fontSize:13,color:"#FFFDF3",lineHeight:1.6,fontWeight:500}}>Wishing you a powerful year ahead. Your 300 birthday points have been added! 🎁</div>
+        </div>
+      ) : (
+        <div style={{margin:"0 20px",background:"linear-gradient(135deg,rgba(245,128,32,.12),rgba(2,111,145,.12))",border:"1px solid rgba(245,128,32,.2)",padding:"16px 18px"}}>
+          <div style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#F58020",fontWeight:700,marginBottom:6}}>Today's Mindset</div>
+          <div style={{fontSize:14,color:"#FFFDF3",lineHeight:1.6,fontWeight:500,fontStyle:"italic"}}>"{quote}"</div>
+        </div>
+      )}
 
       {/* Active Challenges */}
       {myEnrollments.length > 0 && (
@@ -1219,7 +1230,8 @@ export default function MemberCentral() {
   const [challenges,setChallenges] = useState(DEF_CHALLENGES);
   const [earnRules,setEarnRules]   = useState(HOW_TO_EARN);
   const [enrollments,setEnrollments] = useState([]);
-  const [workouts,setWorkouts]       = useState([]);
+  const [workouts,setWorkouts]         = useState([]);
+  const [homeMessages,setHomeMessages] = useState(URUZ_QUOTES);
   const [tab,setTab]                 = useState("home");
   const [loaded,setLoaded]         = useState(false);
   const [toast,setToast]           = useState({msg:"",on:false});
@@ -1238,7 +1250,11 @@ export default function MemberCentral() {
     setRewards(rw.length?rw:DEF_REWARDS);
     setTiers(ti.length?ti:DEF_TIERS);
     if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
-    if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length) setChallenges(cfg.challenges.filter(c=>c.active!==false));}catch{}}
+    if(ds){try{
+      const cfg=JSON.parse(ds.config||"{}");
+      if(cfg.challenges?.length) setChallenges(cfg.challenges.filter(c=>c.active!==false));
+      if(cfg.homeMessages?.length) setHomeMessages(cfg.homeMessages);
+    }catch{}}
     const found = normalized.find(x=>x.id===mid);
     setMember(found||null);
     setLoaded(true);
@@ -1297,7 +1313,7 @@ export default function MemberCentral() {
       <style>{CSS}</style>
       <div className="app">
         <div className="content" key={tab}>
-          {tab==="home"     && <HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments} workouts={workouts} onTabChange={setTab}/>}
+          {tab==="home"     && <HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments} workouts={workouts} onTabChange={setTab} homeMessages={homeMessages}/>}
           {tab==="workouts"   && <WorkoutsTab member={member} tiers={tiers}/>}
           {tab==="challenges" && <ChallengesTab member={member} challenges={challenges}/>}
           {tab==="loyalty"  && <LoyaltyTab member={member} members={members} transactions={transactions} redemptions={redemptions} rewards={rewards} tiers={tiers} challenges={challenges} earnRules={earnRules} memberId={member.id} onRequest={handleRequest}/>}
