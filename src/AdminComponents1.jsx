@@ -611,9 +611,7 @@ function BulkImport({ members, setMembers, toast }) {
   };
 
   const parseCSV = (text) => {
-    const lines = text.trim().split(/
-?
-/);
+    const lines = text.trim().split(/\r?\n/);
     const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g,"_"));
     return lines.slice(1).filter(l=>l.trim()).map(line => {
       const vals = line.split(",").map(v => v.trim());
