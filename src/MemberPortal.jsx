@@ -4,7 +4,8 @@ import {
   updateMemberPin, getTransactions, addTransaction,
   getRedemptions, addRedemption, getRewards, getTiers,
   getMemberEnrollments, enrollInChallenge, getDisplaySettings,
-  getEarnRules, addReferral, getMemberByReferralCode
+  getEarnRules, addReferral, getMemberByReferralCode,
+  getWorkouts, getMemberUnlocks, unlockWorkout
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&display=swap');`;
@@ -322,6 +323,10 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .cs-icon{font-size:56px;margin-bottom:16px;}
 .cs-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:#FFFDF3;margin-bottom:8px;}
 .cs-sub{font-size:13px;color:#6B6866;line-height:1.6;max-width:260px;}
+
+/* ── WORKOUTS TAB ── */
+.pill{padding:4px 12px;border:1px solid #333435;background:none;color:#6B6866;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+.pill.on,.pill:hover{border-color:#F58020;color:#F58020;background:rgba(245,128,32,.08);}
 
 /* ── PROFILE TAB ── */
 .profile-wrap{padding:20px;}
@@ -717,12 +722,233 @@ function LoyaltyTab({ member, members, transactions, redemptions, rewards, tiers
 }
 
 // ── WORKOUTS TAB ─────────────────────────────────────────
-function WorkoutsTab() {
+function WorkoutsTab({ member, tiers }) {
+  const [workouts, setWorkouts]   = useState([]);
+  const [unlocks, setUnlocks]     = useState([]);
+  const [loaded, setLoaded]       = useState(false);
+  const [selected, setSelected]   = useState(null);
+  const [catFilter, setCatFilter] = useState("All");
+  const [diffFilter, setDiffFilter] = useState("All");
+  const [toast, setToast]         = useState({msg:"",on:false});
+  const [redeeming, setRedeeming] = useState(null);
+
+  const showToast = msg => { setToast({msg,on:true}); setTimeout(()=>setToast(t=>({...t,on:false})),2600); };
+
+  useEffect(() => {
+    Promise.all([getWorkouts(), getMemberUnlocks(member.id)]).then(([w, u]) => {
+      setWorkouts(w); setUnlocks(u); setLoaded(true);
+    });
+  }, [member.id]);
+
+  const isUnlocked = wid => unlocks.some(u => u.workoutId === wid);
+
+  const memberTier = getTier(member.points, tiers);
+  const tierOrder = ["Iron","Bronze","Silver","Gold","Elite"];
+
+  const canAccess = (w) => {
+    if (w.access_type === "free") return true;
+    if (w.access_type === "points" && isUnlocked(w.id)) return true;
+    if (w.access_type === "paid" && isUnlocked(w.id)) return true;
+    if (w.access_type === "tier") {
+      const reqIdx = tierOrder.indexOf(w.tier_required);
+      const memIdx = tierOrder.indexOf(memberTier.name);
+      return memIdx >= reqIdx;
+    }
+    return false;
+  };
+
+  const handleRedeem = async (w) => {
+    if (member.points < w.points_cost) { showToast("Not enough points"); return; }
+    setRedeeming(w.id);
+    const unlock = { id: genId("UNL"), workoutId: w.id, memberId: member.id, unlockedBy: "points", date: today() };
+    await unlockWorkout(unlock);
+    await upsertMember({...member, points: member.points - w.points_cost});
+    await addTransaction({ id:genId("TXN"), memberId:member.id, memberName:member.name, type:"redeem", pts:-w.points_cost, note:`Unlocked: ${w.title}`, date:today() });
+    setUnlocks(prev => [...prev, unlock]);
+    setRedeeming(null);
+    showToast(`Unlocked: ${w.title}!`);
+  };
+
+  const cats = ["All", ...new Set(workouts.map(w=>w.category))];
+  const diffs = ["All","Beginner","Intermediate","Advanced"];
+
+  const filtered = workouts.filter(w => {
+    if (catFilter !== "All" && w.category !== catFilter) return false;
+    if (diffFilter !== "All" && w.difficulty !== diffFilter) return false;
+    return true;
+  });
+
+  const ACCESS_CFG = {
+    free:   { label:"Free",     color:"#22C55E", icon:"✓" },
+    points: { label:"Points",   color:"#F58020", icon:"⭐" },
+    paid:   { label:"Purchase", color:"#026F91", icon:"💳" },
+    tier:   { label:"Tier",     color:"#D4AF37", icon:"◆" },
+  };
+
+  if (!loaded) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"50vh"}}><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:4,color:"#F58020"}}>LOADING…</div></div>;
+
+  if (selected) {
+    const w = selected;
+    const accessible = canAccess(w);
+    const exercises = Array.isArray(w.exercises) ? w.exercises : [];
+    return (
+      <div style={{animation:"up .3s ease both"}}>
+        {/* Back button */}
+        <div style={{padding:"16px 20px 0",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setSelected(null)} style={{background:"none",border:"none",color:"#F58020",fontFamily:"'Montserrat',sans-serif",fontSize:12,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>← Back</button>
+        </div>
+
+        {/* Thumbnail */}
+        {w.thumbnail_url && <div style={{width:"100%",height:200,overflow:"hidden",background:"#252627"}}>
+          <img src={w.thumbnail_url} alt={w.title} style={{width:"100%",height:"100%",objectFit:"cover",opacity:accessible?1:0.4}}/>
+        </div>}
+
+        <div style={{padding:"20px 20px 0"}}>
+          {/* Title */}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:8}}>
+            <div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:2,color:"#FFFDF3",lineHeight:1}}>{w.title}</div>
+              <div style={{fontSize:11,color:"#6B6866",marginTop:4}}>{w.category} · {w.difficulty} · {w.duration_mins} min</div>
+            </div>
+            <div style={{background:`${ACCESS_CFG[w.access_type]?.color}18`,border:`1px solid ${ACCESS_CFG[w.access_type]?.color}`,padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:ACCESS_CFG[w.access_type]?.color,flexShrink:0}}>
+              {accessible?"Unlocked":ACCESS_CFG[w.access_type]?.label}
+            </div>
+          </div>
+
+          {w.description && <div style={{fontSize:13,color:"#A8A9AD",lineHeight:1.6,marginBottom:16}}>{w.description}</div>}
+
+          {/* Lock overlay / unlock CTA */}
+          {!accessible && (
+            <div style={{background:"#252627",border:"1px solid #333435",padding:16,marginBottom:16,textAlign:"center"}}>
+              {w.access_type==="points" && <>
+                <div style={{fontSize:32,marginBottom:8}}>⭐</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#FFFDF3",marginBottom:4}}>Unlock for {w.points_cost} points</div>
+                <div style={{fontSize:12,color:"#6B6866",marginBottom:12}}>You have {member.points.toLocaleString()} pts</div>
+                <button onClick={()=>handleRedeem(w)} disabled={member.points<w.points_cost||redeeming===w.id} style={{background:"#F58020",border:"none",color:"#fff",padding:"10px 24px",fontFamily:"'Montserrat',sans-serif",fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",opacity:member.points<w.points_cost?0.5:1}}>
+                  {redeeming===w.id?"Unlocking...":"Redeem Points"}
+                </button>
+              </>}
+              {w.access_type==="paid" && <>
+                <div style={{fontSize:32,marginBottom:8}}>💳</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#FFFDF3",marginBottom:4}}>{w.price_label||"Available for Purchase"}</div>
+                <div style={{fontSize:12,color:"#6B6866"}}>Pay at the front desk — staff will unlock this for you</div>
+              </>}
+              {w.access_type==="tier" && <>
+                <div style={{fontSize:32,marginBottom:8}}>◆</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#FFFDF3",marginBottom:4}}>Requires {w.tier_required} Tier</div>
+                <div style={{fontSize:12,color:"#6B6866"}}>Keep earning points to unlock this workout</div>
+              </>}
+            </div>
+          )}
+
+          {/* Video */}
+          {accessible && w.video_url && (
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",fontWeight:700,marginBottom:8}}>Video</div>
+              <div style={{position:"relative",paddingBottom:"56.25%",background:"#000"}}>
+                <iframe
+                  src={w.video_url.replace("watch?v=","embed/").replace("youtu.be/","youtube.com/embed/")}
+                  style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none"}}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
+
+          {/* PDF */}
+          {accessible && w.pdf_url && (
+            <div style={{marginBottom:16}}>
+              <a href={w.pdf_url} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:10,background:"#252627",border:"1px solid #333435",padding:14,color:"#FFFDF3",textDecoration:"none"}}>
+                <span style={{fontSize:24}}>📄</span>
+                <div><div style={{fontWeight:700,fontSize:13}}>Download Workout Plan</div><div style={{fontSize:11,color:"#6B6866",marginTop:2}}>PDF Guide</div></div>
+                <span style={{marginLeft:"auto",color:"#F58020",fontSize:12,fontWeight:700}}>Open →</span>
+              </a>
+            </div>
+          )}
+
+          {/* Exercises */}
+          {accessible && exercises.length > 0 && (
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",fontWeight:700,marginBottom:10}}>Exercises</div>
+              {exercises.map((ex, i) => (
+                <div key={i} style={{background:"#252627",border:"1px solid #333435",padding:14,marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#FFFDF3"}}>{ex.name}</div>
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#F58020"}}>{ex.sets}×{ex.reps}</div>
+                  </div>
+                  {ex.weight && <div style={{fontSize:11,color:"#6B6866"}}>Weight: {ex.weight}</div>}
+                  {ex.rest && <div style={{fontSize:11,color:"#6B6866"}}>Rest: {ex.rest}</div>}
+                  {ex.notes && <div style={{fontSize:11,color:"#A8A9AD",marginTop:4,fontStyle:"italic"}}>{ex.notes}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="coming-soon">
-      <div className="cs-icon">💪</div>
-      <div className="cs-title">Workouts</div>
-      <div className="cs-sub">Your personalized workout library is coming soon. Free workouts, exclusive content, and more — all in one place.</div>
+    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 64px)"}}>
+      {/* Header */}
+      <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #333435",flexShrink:0}}>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,color:"#FFFDF3",marginBottom:10}}>Workout Library</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+          {cats.map(c=><button key={c} className={`pill${catFilter===c?" on":""}`} onClick={()=>setCatFilter(c)}>{c}</button>)}
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {diffs.map(d=><button key={d} className={`pill${diffFilter===d?" on":""}`} onClick={()=>setDiffFilter(d)}>{d}</button>)}
+        </div>
+      </div>
+
+      {/* Workout List */}
+      <div style={{flex:1,overflowY:"auto",padding:"12px 20px 20px"}}>
+        {filtered.length === 0 && (
+          <div style={{textAlign:"center",padding:"40px 0",color:"#6B6866",fontSize:13}}>
+            {workouts.length === 0 ? "No workouts added yet. Check back soon!" : "No workouts match your filters."}
+          </div>
+        )}
+        {filtered.map(w => {
+          const accessible = canAccess(w);
+          const cfg = ACCESS_CFG[w.access_type];
+          return (
+            <div key={w.id} onClick={()=>setSelected(w)} style={{background:"#252627",border:"1px solid #333435",marginBottom:10,cursor:"pointer",overflow:"hidden",transition:"border-color .2s"}}
+              onTouchStart={e=>e.currentTarget.style.borderColor="rgba(245,128,32,.5)"}
+              onTouchEnd={e=>e.currentTarget.style.borderColor="#333435"}>
+              <div style={{display:"flex",gap:0}}>
+                {/* Thumbnail */}
+                <div style={{width:90,height:90,background:"#1F2020",flexShrink:0,overflow:"hidden",position:"relative"}}>
+                  {w.thumbnail_url
+                    ? <img src={w.thumbnail_url} alt={w.title} style={{width:"100%",height:"100%",objectFit:"cover",opacity:accessible?1:0.4}}/>
+                    : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>💪</div>
+                  }
+                  {!accessible && <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.5)",fontSize:20}}>🔒</div>}
+                </div>
+                {/* Info */}
+                <div style={{flex:1,padding:"12px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14,color:"#FFFDF3",lineHeight:1.3,marginBottom:3}}>{w.title}</div>
+                    <div style={{fontSize:11,color:"#6B6866"}}>{w.category} · {w.difficulty} · {w.duration_mins}m</div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6}}>
+                    <div style={{display:"flex",gap:6"}}>
+                      {w.video_url && <span style={{fontSize:10,color:"#6B6866"}}>📹</span>}
+                      {w.pdf_url && <span style={{fontSize:10,color:"#6B6866"}}>📄</span>}
+                      {Array.isArray(w.exercises)&&w.exercises.length>0 && <span style={{fontSize:10,color:"#6B6866"}}>🏋 {w.exercises.length} exercises</span>}
+                    </div>
+                    <div style={{background:`${cfg?.color}18`,border:`1px solid ${cfg?.color}44`,padding:"2px 8px",fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:accessible?"#22C55E":cfg?.color}}>
+                      {accessible?"Unlocked":w.access_type==="points"?`${w.points_cost} pts`:w.access_type==="tier"?w.tier_required:cfg?.label}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
     </div>
   );
 }
@@ -897,7 +1123,7 @@ export default function MemberCentral() {
       <div className="app">
         <div className="content" key={tab}>
           {tab==="home"     && <HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments}/>}
-          {tab==="workouts" && <WorkoutsTab/>}
+          {tab==="workouts" && <WorkoutsTab member={member} tiers={tiers}/>}
           {tab==="loyalty"  && <LoyaltyTab member={member} members={members} transactions={transactions} redemptions={redemptions} rewards={rewards} tiers={tiers} challenges={challenges} earnRules={earnRules} memberId={member.id} onRequest={handleRequest}/>}
           {tab==="profile"  && <ProfileTab member={member} tiers={tiers} onLogout={handleLogout} onRefresh={()=>loadData()}/>}
         </div>
