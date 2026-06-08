@@ -933,7 +933,7 @@ function WorkoutsTab({ member, tiers }) {
                     <div style={{fontSize:11,color:"#6B6866"}}>{w.category} · {w.difficulty} · {w.duration_mins}m</div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6}}>
-                    <div style={{display:"flex",gap:6"}}>
+                    <div style={{display:"flex",gap:6}}>
                       {w.video_url && <span style={{fontSize:10,color:"#6B6866"}}>📹</span>}
                       {w.pdf_url && <span style={{fontSize:10,color:"#6B6866"}}>📄</span>}
                       {Array.isArray(w.exercises)&&w.exercises.length>0 && <span style={{fontSize:10,color:"#6B6866"}}>🏋 {w.exercises.length} exercises</span>}
