@@ -548,18 +548,30 @@ function LoginFlow({ onLogin }) {
 }
 
 // ── HOME TAB ──────────────────────────────────────────────
-function HomeTab({ member, members, transactions, tiers, challenges, enrollments }) {
+const URUZ_QUOTES = [
+  "Every rep is a deposit into your future self.",
+  "Show up. Put in the work. The results follow.",
+  "Strength isn't given — it's built, session by session.",
+  "Your only competition is who you were yesterday.",
+  "The gym doesn't care about your excuses. Neither should you.",
+  "Built different. Trained harder.",
+];
+
+function HomeTab({ member, members, transactions, tiers, challenges, enrollments, workouts, onTabChange }) {
   const tier = getTier(member.points, tiers);
   const next = getNext(member.points, tiers);
   const tierPct = next ? Math.round(((member.points-tier.min)/(next.min-tier.min))*100) : 100;
   const rank = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).findIndex(m=>m.id===member.id)+1;
-  const myTxns = transactions.filter(t=>t.memberId===member.id||t.member_id===member.id).slice(0,5);
-  const myEnrollments = enrollments.filter(e=>e.memberId===member.id||e.member_id===member.id).filter(e=>!e.completed).slice(0,2);
+  const myTxns = transactions.filter(t=>t.memberId===member.id||t.member_id===member.id).slice(0,3);
+  const myEnrollments = enrollments.filter(e=>(e.memberId===member.id||e.member_id===member.id)&&!e.completed);
+  const quote = URUZ_QUOTES[new Date().getDay() % URUZ_QUOTES.length];
+  const newWorkouts = workouts.filter(w=>w.active&&(w.access_type==="free")).slice(0,2);
+  const featuredChallenge = challenges.find(c=>!myEnrollments.find(e=>e.challengeId===String(c.id))) || null;
 
   const actCfg={checkin:{e:"📍",bg:"rgba(2,111,145,.15)"},challenge:{e:"🏆",bg:"rgba(212,175,55,.15)"},referral:{e:"👥",bg:"rgba(34,197,94,.15)"},purchase:{e:"🛒",bg:"rgba(168,85,247,.15)"},redeem:{e:"🎟",bg:"rgba(239,68,68,.15)"},class:{e:"💪",bg:"rgba(245,128,32,.15)"},bonus:{e:"⭐",bg:"rgba(212,175,55,.15)"},manual:{e:"✏",bg:"rgba(168,85,247,.15)"},deduct:{e:"➖",bg:"rgba(239,68,68,.15)"}};
 
   return (
-    <div>
+    <div style={{paddingBottom:20}}>
       {/* Hero */}
       <div className="home-hero">
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
@@ -567,46 +579,116 @@ function HomeTab({ member, members, transactions, tiers, challenges, enrollments
           <div style={{fontSize:10,letterSpacing:3,textTransform:"uppercase",color:"#6B6866",fontWeight:700}}>Member Central</div>
         </div>
         <div className="hero-name">Hey, {member.name.split(" ")[0]} 👋</div>
-        <div className="hero-sub">{member.id} · Member since {new Date(member.joinDate).toLocaleDateString("en-GB",{month:"short",year:"numeric"})}</div>
+        <div className="hero-sub">Member since {new Date(member.joinDate).toLocaleDateString("en-GB",{month:"short",year:"numeric"})} · {tier.icon} {tier.name}</div>
         <div className="hero-pts">{member.points.toLocaleString()}</div>
         <div className="hero-pts-lbl">Points</div>
         <div className="tier-badge" style={{color:tier.color,borderColor:tier.color,background:`${tier.color}18`}}>{tier.icon} {tier.name}</div>
-        {next&&<div className="prog-bar-wrap"><div className="prog-labels"><span>{tier.name}</span><span style={{color:next.color}}>{(next.min-member.points).toLocaleString()} to {next.name}</span></div><div className="prog-track"><div className="prog-fill" style={{width:`${tierPct}%`,background:`linear-gradient(90deg,#026F91,#F58020)`}}/></div></div>}
+        {next&&<div className="prog-bar-wrap"><div className="prog-labels"><span style={{color:tier.color}}>{tier.name}</span><span style={{color:next.color}}>{(next.min-member.points).toLocaleString()} pts to {next.name}</span></div><div className="prog-track"><div className="prog-fill" style={{width:`${tierPct}%`,background:`linear-gradient(90deg,#026F91,#F58020)`}}/></div></div>}
       </div>
 
       {/* Stats */}
       <div className="stats-row">
-        <div className="stat-cell"><div className="stat-num" style={{color:"#F58020"}}>#{rank}</div><div className="stat-lbl">Rank</div></div>
+        <div className="stat-cell"><div className="stat-num" style={{color:"#F58020"}}>#{rank}</div><div className="stat-lbl">Club Rank</div></div>
         <div className="stat-cell"><div className="stat-num">🔥{member.streak}</div><div className="stat-lbl">Streak</div></div>
         <div className="stat-cell"><div className="stat-num">{member.checkins}</div><div className="stat-lbl">Check-ins</div></div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="home-section">
+        <div className="sec-label">Quick Actions</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+          {[
+            {icon:"📍",label:"Check In",action:()=>window.open("/checkin","_blank"),color:"#026F91"},
+            {icon:"🎟",label:"Redeem",action:()=>onTabChange("loyalty"),color:"#F58020"},
+            {icon:"🏆",label:"Rankings",action:()=>onTabChange("loyalty"),color:"#D4AF37"},
+          ].map((a,i)=>(
+            <button key={i} onClick={a.action} style={{
+              background:`${a.color}15`,border:`1px solid ${a.color}44`,
+              padding:"14px 8px",display:"flex",flexDirection:"column",
+              alignItems:"center",gap:6,cursor:"pointer",transition:"all .15s",
+              fontFamily:"'Montserrat',sans-serif",
+            }}
+            onTouchStart={e=>e.currentTarget.style.background=`${a.color}30`}
+            onTouchEnd={e=>e.currentTarget.style.background=`${a.color}15`}>
+              <span style={{fontSize:22}}>{a.icon}</span>
+              <span style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:a.color}}>{a.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Motivational Quote */}
+      <div style={{margin:"0 20px",background:"linear-gradient(135deg,rgba(245,128,32,.12),rgba(2,111,145,.12))",border:"1px solid rgba(245,128,32,.2)",padding:"16px 18px"}}>
+        <div style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#F58020",fontWeight:700,marginBottom:6}}>Today's Mindset</div>
+        <div style={{fontSize:14,color:"#FFFDF3",lineHeight:1.6,fontWeight:500,fontStyle:"italic"}}>"{quote}"</div>
       </div>
 
       {/* Active Challenges */}
       {myEnrollments.length > 0 && (
         <div className="home-section">
-          <div className="sec-label">Active Challenges</div>
-          {myEnrollments.map(e=>{
+          <div className="sec-label" style={{cursor:"pointer"}} onClick={()=>onTabChange("challenges")}>Active Challenges <span style={{color:"#F58020",fontSize:10}}>See all →</span></div>
+          {myEnrollments.slice(0,2).map(e=>{
             const c = challenges.find(x=>String(x.id)===e.challengeId)||{};
             const pct = Math.min(100,Math.round(((e.progress||0)/(e.goal||1))*100));
             return (
-              <div key={e.id} className="quick-card" style={{flexDirection:"column",alignItems:"flex-start",gap:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,width:"100%"}}>
-                  <span style={{fontSize:20}}>{c.icon||"⚔"}</span>
-                  <div style={{flex:1}}><div className="qc-label">{c.name||e.challengeName}</div><div className="qc-sub">{pct}% complete</div></div>
-                  <div className="qc-pts">+{c.pts||0}</div>
+              <div key={e.id} style={{background:"#252627",border:"1px solid rgba(245,128,32,.3)",padding:"14px",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                  <span style={{fontSize:18}}>{c.icon||"⚔"}</span>
+                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#FFFDF3"}}>{c.name||e.challengeName}</div><div style={{fontSize:11,color:"#6B6866",marginTop:1}}>{pct}% complete · +{c.pts||0} pts</div></div>
                 </div>
-                <div style={{width:"100%",height:4,background:"#333435"}}><div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#026F91,#F58020)"}}/></div>
+                <div style={{height:4,background:"#333435"}}><div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#026F91,#F58020)"}}/></div>
               </div>
             );
           })}
         </div>
       )}
 
+      {/* Featured Challenge (if not joined any) */}
+      {myEnrollments.length === 0 && featuredChallenge && (
+        <div className="home-section">
+          <div className="sec-label">Featured Challenge</div>
+          <div style={{background:"linear-gradient(135deg,#1a1208,#252627)",border:"1px solid rgba(245,128,32,.3)",padding:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+              <div style={{width:44,height:44,background:"rgba(245,128,32,.15)",border:"1px solid rgba(245,128,32,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{featuredChallenge.icon}</div>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:1,color:"#FFFDF3"}}>{featuredChallenge.name}</div>
+                <div style={{fontSize:11,color:"#6B6866"}}>{featuredChallenge.desc}</div>
+              </div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#F58020"}}>+{featuredChallenge.pts}</div>
+            </div>
+            <button onClick={()=>onTabChange("challenges")} style={{width:"100%",padding:"10px",background:"#F58020",border:"none",color:"#fff",fontFamily:"'Montserrat',sans-serif",fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>
+              View Challenges
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* New Workouts */}
+      {newWorkouts.length > 0 && (
+        <div className="home-section">
+          <div className="sec-label" style={{cursor:"pointer"}} onClick={()=>onTabChange("workouts")}>New Workouts <span style={{color:"#F58020",fontSize:10}}>See all →</span></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {newWorkouts.map(w=>(
+              <div key={w.id} onClick={()=>onTabChange("workouts")} style={{background:"#252627",border:"1px solid #333435",overflow:"hidden",cursor:"pointer"}}>
+                <div style={{height:80,background:"#1F2020",position:"relative"}}>
+                  {w.thumbnail_url?<img src={w.thumbnail_url} alt={w.title} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>💪</div>}
+                  <div style={{position:"absolute",top:6,right:6,background:"rgba(34,197,94,.9)",padding:"2px 6px",fontSize:8,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"#fff"}}>Free</div>
+                </div>
+                <div style={{padding:"8px 10px"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#FFFDF3",lineHeight:1.3}}>{w.title}</div>
+                  <div style={{fontSize:10,color:"#6B6866",marginTop:2}}>{w.category} · {w.duration_mins}m</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recent Activity */}
-      <div className="home-section" style={{paddingBottom:20}}>
+      <div className="home-section">
         <div className="sec-label">Recent Activity</div>
         {myTxns.length === 0 ? (
-          <div style={{color:"#6B6866",fontSize:13,padding:"20px 0",textAlign:"center"}}>No activity yet. Check in to start earning!</div>
+          <div style={{color:"#6B6866",fontSize:13,padding:"16px 0",textAlign:"center"}}>No activity yet. Check in to start earning!</div>
         ) : myTxns.map(a=>{
           const k=actCfg[a.type]||actCfg.checkin;
           return (
@@ -717,6 +799,96 @@ function LoyaltyTab({ member, members, transactions, redemptions, rewards, tiers
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+
+// ── CHALLENGES TAB ───────────────────────────────────────
+function ChallengesTab({ member, challenges }) {
+  const [enrollments, setEnrollments] = useState([]);
+  const [joining, setJoining]         = useState(null);
+  const [toastMsg, setToastMsg]       = useState("");
+  const [toastOn, setToastOn]         = useState(false);
+
+  const showToast = msg => { setToastMsg(msg); setToastOn(true); setTimeout(()=>setToastOn(false),2600); };
+
+  useEffect(() => {
+    if (member.id) getMemberEnrollments(member.id).then(setEnrollments);
+  }, [member.id]);
+
+  const isEnrolled = cid => enrollments.find(e=>e.challengeId===String(cid));
+
+  const handleJoin = async (c) => {
+    if(joining) return; setJoining(c.id);
+    const enrollment = { id:genId("ENR"), challengeId:String(c.id), challengeName:c.name, memberId:member.id, memberName:member.name, progress:0, goal:c.goal||1, enrolledDate:today() };
+    await enrollInChallenge(enrollment);
+    setEnrollments(prev=>[...prev,{...enrollment,completed:false}]);
+    setJoining(null); showToast(`Joined: ${c.name}!`);
+  };
+
+  const active = challenges.filter(c => { const e=isEnrolled(c.id); return e&&!e.completed; });
+  const available = challenges.filter(c => !isEnrolled(c.id));
+  const completed = challenges.filter(c => { const e=isEnrolled(c.id); return e&&e.completed; });
+
+  const ChallengeCard = ({c, enrolled, compact}) => {
+    const progress = enrolled ? enrolled.progress : 0;
+    const goal = c.goal || 1;
+    const pct = Math.min(100, Math.round((progress/goal)*100));
+    const isCompleted = enrolled?.completed;
+    return (
+      <div className="ch-card" style={{borderColor:isCompleted?"#22C55E":enrolled?"rgba(245,128,32,.4)":undefined,marginBottom:10}}>
+        <div className="ch-top">
+          <div className="ch-icon-w">{c.icon}</div>
+          <div style={{flex:1}}>
+            <div className="ch-name">{c.name}</div>
+            <div className="ch-desc">{c.desc}</div>
+          </div>
+          {isCompleted ? (
+            <div style={{background:"rgba(34,197,94,.15)",color:"#22C55E",padding:"3px 8px",fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase"}}>✓ Done</div>
+          ) : enrolled ? (
+            <div style={{background:"rgba(245,128,32,.15)",color:"#F58020",padding:"3px 8px",fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase"}}>Joined</div>
+          ) : (
+            <button onClick={()=>handleJoin(c)} disabled={joining===c.id}
+              style={{background:"#F58020",border:"none",color:"#fff",padding:"5px 12px",fontFamily:"'Montserrat',sans-serif",fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer"}}>
+              {joining===c.id?"...":"Join"}
+            </button>
+          )}
+        </div>
+        <div className="ch-meta">
+          <span className="ch-dl">⏱ {c.deadline}</span>
+          <span className="ch-rew">+{c.pts} PTS</span>
+        </div>
+        {enrolled && !isCompleted && <>
+          <div className="ch-track"><div className="ch-fill" style={{width:`${pct}%`}}/></div>
+          <div className="ch-bar-lbl"><span>{progress}/{goal}</span><span style={{color:pct>=100?"#22C55E":"#6B6866"}}>{pct}%</span></div>
+        </>}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 64px)"}}>
+      <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #333435",flexShrink:0}}>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,color:"#FFFDF3"}}>Challenges</div>
+        <div style={{fontSize:11,color:"#6B6866",marginTop:2}}>{active.length} active · {available.length} available · {completed.length} completed</div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"16px 20px 20px"}}>
+        {active.length > 0 && <>
+          <div className="sec-label">In Progress</div>
+          {active.map(c=><ChallengeCard key={c.id} c={c} enrolled={isEnrolled(c.id)}/>)}
+        </>}
+        {available.length > 0 && <>
+          <div className="sec-label">Available</div>
+          {available.map(c=><ChallengeCard key={c.id} c={c} enrolled={null}/>)}
+        </>}
+        {completed.length > 0 && <>
+          <div className="sec-label">Completed</div>
+          {completed.map(c=><ChallengeCard key={c.id} c={c} enrolled={isEnrolled(c.id)}/>)}
+        </>}
+        {challenges.length === 0 && <div style={{color:"#6B6866",fontSize:13,textAlign:"center",padding:"40px 0"}}>No active challenges right now. Check back soon!</div>}
+      </div>
+      <div className={`toast${toastOn?" on":""}`}>✓ {toastMsg}</div>
     </div>
   );
 }
@@ -1029,10 +1201,11 @@ function ProfileTab({ member, tiers, onLogout, onRefresh }) {
 
 // ── ROOT ──────────────────────────────────────────────────
 const BOTTOM_TABS = [
-  { id:"home",     icon:"🏠", label:"Home"     },
-  { id:"workouts", icon:"💪", label:"Workouts" },
-  { id:"loyalty",  icon:"⭐", label:"Loyalty"  },
-  { id:"profile",  icon:"👤", label:"Profile"  },
+  { id:"home",       icon:"🏠", label:"Home"       },
+  { id:"workouts",   icon:"💪", label:"Workouts"   },
+  { id:"challenges", icon:"⚔",  label:"Challenges" },
+  { id:"loyalty",    icon:"⭐", label:"Loyalty"    },
+  { id:"profile",    icon:"👤", label:"Profile"    },
 ];
 
 export default function MemberCentral() {
@@ -1046,7 +1219,8 @@ export default function MemberCentral() {
   const [challenges,setChallenges] = useState(DEF_CHALLENGES);
   const [earnRules,setEarnRules]   = useState(HOW_TO_EARN);
   const [enrollments,setEnrollments] = useState([]);
-  const [tab,setTab]               = useState("home");
+  const [workouts,setWorkouts]       = useState([]);
+  const [tab,setTab]                 = useState("home");
   const [loaded,setLoaded]         = useState(false);
   const [toast,setToast]           = useState({msg:"",on:false});
   const [tierCelebration,setTierCelebration] = useState(null);
@@ -1055,9 +1229,10 @@ export default function MemberCentral() {
 
   const loadData = async (id) => {
     const mid = id||memberId;
-    const [m,t,r,rw,ti,ds,er] = await Promise.all([
-      getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers(), getDisplaySettings(), getEarnRules()
+    const [m,t,r,rw,ti,ds,er,wk] = await Promise.all([
+      getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers(), getDisplaySettings(), getEarnRules(), getWorkouts()
     ]);
+    if(wk?.length) setWorkouts(wk);
     const normalized = m.map(normalizeMember);
     setMembers(normalized); setTxns(t); setRdms(r);
     setRewards(rw.length?rw:DEF_REWARDS);
@@ -1122,8 +1297,9 @@ export default function MemberCentral() {
       <style>{CSS}</style>
       <div className="app">
         <div className="content" key={tab}>
-          {tab==="home"     && <HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments}/>}
-          {tab==="workouts" && <WorkoutsTab member={member} tiers={tiers}/>}
+          {tab==="home"     && <HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments} workouts={workouts} onTabChange={setTab}/>}
+          {tab==="workouts"   && <WorkoutsTab member={member} tiers={tiers}/>}
+          {tab==="challenges" && <ChallengesTab member={member} challenges={challenges}/>}
           {tab==="loyalty"  && <LoyaltyTab member={member} members={members} transactions={transactions} redemptions={redemptions} rewards={rewards} tiers={tiers} challenges={challenges} earnRules={earnRules} memberId={member.id} onRequest={handleRequest}/>}
           {tab==="profile"  && <ProfileTab member={member} tiers={tiers} onLogout={handleLogout} onRefresh={()=>loadData()}/>}
         </div>
