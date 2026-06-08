@@ -50,32 +50,26 @@ const DEF_CHALLENGES = [
   { id:4, name:"Iron Will",       desc:"15-day consecutive streak",      pts:300,  goal:15, deadline:"4 days left",  icon:"🔥", active:true },
 ];
 
-async function sload(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-async function ssave(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-}
 function getSession() { try { const v=localStorage.getItem("uruz:session"); return v?JSON.parse(v):null; } catch { return null; } }
 function saveSession(d) { try { localStorage.setItem("uruz:session",JSON.stringify(d)); } catch {} }
 function clearSession()  { try { localStorage.removeItem("uruz:session"); } catch {} }
 
 function normalizeMember(m) {
   return {
-    id:          m.id,
-    name:        m.name        || "",
-    phone:       m.phone       || "",
-    email:       m.email       || "",
-    joinDate:    m.join_date   || m.joinDate || new Date().toISOString().slice(0,10),
-    points:      m.points      ?? 0,
-    checkins:    m.checkins    ?? 0,
-    streak:      m.streak      ?? 0,
-    status:      m.status      || "active",
-    pin:         m.pin         || null,
-    lastCheckin: m.last_checkin|| m.lastCheckin || null,
-    birthday:      m.birthday       || null,
-    referral_code: m.referral_code  || null,
+    id:            m.id,
+    name:          m.name          || "",
+    phone:         m.phone         || "",
+    email:         m.email         || "",
+    joinDate:      m.join_date     || m.joinDate || new Date().toISOString().slice(0,10),
+    points:        m.points        ?? 0,
+    checkins:      m.checkins      ?? 0,
+    streak:        m.streak        ?? 0,
+    status:        m.status        || "active",
+    pin:           m.pin           || null,
+    lastCheckin:   m.last_checkin  || m.lastCheckin  || null,
+    birthday:      m.birthday      || null,
+    referral_code: m.referral_code || null,
+    tier_reached:  m.tier_reached  || null,
   };
 }
 
@@ -92,10 +86,299 @@ const CSS = `
 ${FONTS}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;}
-.app{min-height:100vh;background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;max-width:920px;margin:0 auto;padding-bottom:60px;}
-.screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;}
+
+/* APP SHELL */
+.app{
+  min-height:100vh;
+  background:#1F2020;
+  color:#FFFDF3;
+  font-family:'Montserrat',sans-serif;
+  max-width:520px;
+  margin:0 auto;
+  padding-bottom:72px;
+  position:relative;
+}
+
+/* TOP BAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px 12px;
+  background:#1F2020;
+  position:sticky;top:0;z-index:100;
+  border-bottom:1px solid #333435;
+}
+.topbar-logo{height:32px;width:auto;}
+.topbar-greeting{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:16px;letter-spacing:2px;color:#FFFDF3;
+}
+.topbar-pts{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:20px;color:#F58020;letter-spacing:1px;
+}
+
+/* BOTTOM NAV */
+.bottom-nav{
+  position:fixed;bottom:0;left:50%;
+  transform:translateX(-50%);
+  width:100%;max-width:520px;
+  background:#252627;
+  border-top:1px solid #333435;
+  display:flex;z-index:200;
+  height:64px;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:4px;background:none;border:none;
+  cursor:pointer;transition:all .15s;
+  color:#6B6866;font-family:'Montserrat',sans-serif;
+}
+.nav-item.active{color:#F58020;}
+.nav-item.active .nav-dot{background:#F58020;}
+.nav-icon{font-size:20px;line-height:1;}
+.nav-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:transparent;margin-top:-2px;}
+
+/* CONTENT */
+.content{padding:0;animation:up .3s ease both;}
+@keyframes up{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── HOME TAB ── */
+.home-hero{
+  background:linear-gradient(135deg,#1a1208 0%,#1F2020 70%);
+  padding:24px 20px 20px;
+  position:relative;overflow:hidden;
+}
+.home-hero::after{
+  content:'URUZ';
+  position:absolute;right:-20px;top:-10px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:120px;letter-spacing:8px;
+  color:rgba(245,128,32,0.05);
+  pointer-events:none;user-select:none;
+}
+.hero-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:32px;letter-spacing:2px;
+  line-height:1;color:#FFFDF3;
+  margin-bottom:4px;
+}
+.hero-sub{font-size:11px;color:#6B6866;font-weight:500;}
+.hero-pts{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:56px;line-height:1;
+  color:#F58020;letter-spacing:-1px;
+  margin:16px 0 4px;
+}
+.hero-pts-lbl{
+  font-size:10px;letter-spacing:3px;
+  text-transform:uppercase;color:#6B6866;
+  font-weight:600;margin-bottom:12px;
+}
+.tier-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;
+  font-family:'Montserrat',sans-serif;
+  font-size:11px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  border:1px solid currentColor;
+}
+.prog-bar-wrap{margin-top:14px;}
+.prog-labels{display:flex;justify-content:space-between;font-size:11px;color:#6B6866;margin-bottom:6px;font-weight:500;}
+.prog-track{height:3px;background:#333435;}
+.prog-fill{height:100%;transition:width 1.2s cubic-bezier(0.16,1,0.3,1);}
+
+.stats-row{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border-top:1px solid #333435;
+  background:#1F2020;
+}
+.stat-cell{padding:12px 8px;text-align:center;border-right:1px solid #333435;}
+.stat-cell:last-child{border-right:none;}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:24px;line-height:1;color:#FFFDF3;}
+.stat-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;margin-top:2px;font-weight:600;}
+
+.home-section{padding:20px 20px 0;}
+.sec-label{
+  font-size:10px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:#6B6866;
+  margin-bottom:12px;display:flex;align-items:center;gap:10px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:#333435;}
+
+.quick-card{
+  background:#252627;border:1px solid #333435;
+  padding:16px;margin-bottom:10px;
+  display:flex;align-items:center;gap:14px;
+}
+.qc-icon{font-size:24px;flex-shrink:0;}
+.qc-label{font-size:14px;font-weight:600;color:#FFFDF3;}
+.qc-sub{font-size:11px;color:#6B6866;margin-top:2px;}
+.qc-pts{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px;color:#F58020;
+  margin-left:auto;flex-shrink:0;
+}
+
+.act-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #333435;gap:12px;}
+.act-row:last-child{border-bottom:none;}
+.act-icon{width:34px;height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.act-label{font-size:13px;font-weight:500;color:#FFFDF3;}
+.act-date{font-size:11px;color:#6B6866;margin-top:1px;}
+.act-pts{font-family:'Bebas Neue',sans-serif;font-size:18px;margin-left:auto;}
+
+/* ── LOYALTY TAB ── */
+.loyalty-wrap{padding:0 20px;}
+.loyalty-tabs{
+  display:flex;border-bottom:1px solid #333435;
+  margin-bottom:20px;
+  position:sticky;top:57px;
+  background:#1F2020;z-index:90;
+}
+.ltab{
+  flex:1;padding:12px 4px;background:none;border:none;
+  color:#6B6866;font-family:'Montserrat',sans-serif;
+  font-size:10px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;cursor:pointer;
+  position:relative;text-align:center;transition:color .2s;
+}
+.ltab.on{color:#F58020;}
+.ltab.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#F58020;}
+
+/* rewards */
+.rewards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.rwd-card{background:#252627;border:1px solid #333435;padding:16px;position:relative;transition:border-color .2s;}
+.rwd-card:hover:not(.oos){border-color:#F58020;}
+.rwd-card.oos{opacity:.42;}
+.rwd-icon{font-size:26px;margin-bottom:8px;display:block;}
+.rwd-cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;margin-bottom:4px;font-weight:700;}
+.rwd-name{font-size:13px;font-weight:700;color:#FFFDF3;line-height:1.3;margin-bottom:10px;}
+.rwd-footer{display:flex;align-items:center;justify-content:space-between;}
+.rwd-cost{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#F58020;}
+.rdm-btn{padding:5px 12px;background:#F58020;border:none;color:#fff;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;}
+.rdm-btn:disabled{background:#333435;color:#6B6866;cursor:not-allowed;}
+.rdm-btn.pending-btn{background:#026F91;}
+.oos-tag{position:absolute;top:8px;right:8px;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;background:#333435;color:#6B6866;padding:2px 6px;font-weight:700;}
+
+/* challenges */
+.ch-card{background:#252627;border:1px solid #333435;padding:16px;margin-bottom:10px;transition:border-color .2s;}
+.ch-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}
+.ch-icon-w{width:38px;height:38px;background:rgba(245,128,32,.1);border:1px solid rgba(245,128,32,.28);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.ch-name{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#FFFDF3;line-height:1;margin-bottom:3px;letter-spacing:1px;}
+.ch-desc{font-size:11px;color:#6B6866;}
+.ch-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.ch-dl{font-size:11px;color:#6B6866;font-weight:500;}
+.ch-rew{font-family:'Bebas Neue',sans-serif;font-size:16px;color:#F58020;}
+.ch-track{height:4px;background:#333435;}
+.ch-fill{height:100%;background:linear-gradient(90deg,#026F91,#F58020);transition:width 1s cubic-bezier(0.16,1,0.3,1);}
+.ch-bar-lbl{display:flex;justify-content:space-between;font-size:11px;color:#6B6866;margin-top:5px;font-weight:500;}
+
+/* leaderboard */
+.lb-row{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid #333435;gap:12px;}
+.lb-row:last-child{border-bottom:none;}
+.lb-row.me{background:rgba(245,128,32,.06);margin:0 -20px;padding-left:20px;padding-right:20px;border-left:2px solid #F58020;}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#6B6866;width:26px;text-align:center;flex-shrink:0;}
+.lb-rank.top{color:#D4AF37;}
+.lb-av{width:32px;height:32px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;flex-shrink:0;background:#333435;color:#FFFDF3;}
+.lb-name{flex:1;font-size:13px;font-weight:500;}
+.lb-name .you{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:#F58020;background:rgba(245,128,32,.14);padding:1px 5px;margin-left:6px;font-weight:700;}
+.lb-streak{font-size:11px;color:#6B6866;}
+.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#FFFDF3;text-align:right;min-width:60px;}
+
+/* earn */
+.tier-ladder{display:flex;border:1px solid #333435;overflow:hidden;margin-bottom:20px;}
+.tier-rung{flex:1;padding:12px 6px;text-align:center;border-right:1px solid #333435;}
+.tier-rung:last-child{border-right:none;}
+.tier-rung.cur{background:rgba(245,128,32,.07);}
+.tier-rung-icon{font-size:16px;display:block;margin-bottom:3px;}
+.tier-rung-name{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.tier-rung-min{font-size:9px;color:#6B6866;margin-top:2px;font-weight:500;}
+.earn-tbl{width:100%;border-collapse:collapse;}
+.earn-tbl tr{border-bottom:1px solid #333435;}
+.earn-tbl tr:last-child{border-bottom:none;}
+.earn-tbl td{padding:11px 6px;font-size:13px;vertical-align:middle;}
+.earn-action{color:#FFFDF3;font-weight:600;font-size:13px;}
+.earn-note{color:#6B6866;font-size:11px;margin-top:1px;}
+.earn-pts{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#F58020;text-align:right;white-space:nowrap;}
+
+/* pending redemptions */
+.rdm-pending{background:rgba(2,111,145,.1);border:1px solid rgba(2,111,145,.3);padding:10px 14px;margin-bottom:14px;}
+.rdm-pending-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#026F91;font-weight:700;margin-bottom:8px;}
+.rdm-pending-item{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(2,111,145,.2);}
+.rdm-pending-item:last-child{border-bottom:none;}
+
+/* pills */
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.pill{padding:4px 12px;border:1px solid #333435;background:none;color:#6B6866;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+.pill.on,.pill:hover{border-color:#F58020;color:#F58020;background:rgba(245,128,32,.08);}
+
+/* ── WORKOUTS TAB (placeholder) ── */
+.coming-soon{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:60px 20px;text-align:center;
+  min-height:50vh;
+}
+.cs-icon{font-size:56px;margin-bottom:16px;}
+.cs-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:#FFFDF3;margin-bottom:8px;}
+.cs-sub{font-size:13px;color:#6B6866;line-height:1.6;max-width:260px;}
+
+/* ── PROFILE TAB ── */
+.profile-wrap{padding:20px;}
+.profile-header{
+  display:flex;align-items:center;gap:16px;
+  background:#252627;border:1px solid #333435;
+  padding:20px;margin-bottom:16px;
+}
+.profile-av{
+  width:56px;height:56px;border-radius:2px;
+  background:rgba(245,128,32,.15);border:2px solid #F58020;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Bebas Neue',sans-serif;font-size:22px;color:#F58020;
+  flex-shrink:0;
+}
+.profile-name{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:#FFFDF3;line-height:1;}
+.profile-id{font-size:11px;color:#6B6866;margin-top:3px;font-family:'Montserrat',sans-serif;}
+.profile-tier{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;}
+
+.profile-section{background:#252627;border:1px solid #333435;margin-bottom:12px;overflow:hidden;}
+.profile-section-title{
+  font-size:10px;font-weight:700;letter-spacing:2.5px;
+  text-transform:uppercase;color:#6B6866;
+  padding:12px 16px;border-bottom:1px solid #333435;
+}
+.profile-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid #333435;
+}
+.profile-row:last-child{border-bottom:none;}
+.profile-row-label{font-size:12px;color:#6B6866;font-weight:500;}
+.profile-row-value{font-size:13px;color:#FFFDF3;font-weight:600;text-align:right;}
+
+.ref-box{
+  background:#252627;border:1px solid #333435;padding:16px;margin-bottom:12px;
+}
+.ref-code{
+  font-family:'Bebas Neue',sans-serif;font-size:28px;
+  color:#F58020;letter-spacing:3px;text-align:center;
+  padding:12px;background:#2A2B2C;border:1px dashed #F58020;
+  margin:10px 0;
+}
+.ref-hint{font-size:11px;color:#6B6866;text-align:center;line-height:1.6;}
+
+.btn-signout{
+  width:100%;padding:14px;background:none;
+  border:1px solid #EF4444;color:#EF4444;
+  font-family:'Montserrat',sans-serif;font-size:12px;
+  font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;transition:all .15s;margin-top:8px;
+}
+.btn-signout:hover{background:#EF4444;color:#fff;}
+
+/* ── LOGIN / AUTH SCREENS ── */
+.screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;background:#1F2020;}
 .box{width:100%;max-width:380px;background:#252627;border:1px solid #333435;padding:36px 28px;}
-.brand-sub{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#6B6866;text-align:center;margin-top:3px;font-weight:700;margin-bottom:0;}
+.brand-sub{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#6B6866;text-align:center;margin-top:3px;font-weight:700;}
 .divider{height:1px;background:#333435;margin:24px 0;}
 .step-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:#FFFDF3;margin-bottom:6px;text-align:center;}
 .step-sub{font-size:12px;color:#6B6866;text-align:center;margin-bottom:20px;font-weight:500;line-height:1.6;}
@@ -125,101 +408,34 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .pin-key.empty{background:transparent;border-color:transparent;pointer-events:none;}
 .member-chip{display:flex;align-items:center;gap:12px;background:#2A2B2C;border:1px solid #333435;padding:12px 14px;margin-bottom:20px;}
 .chip-av{width:36px;height:36px;background:rgba(245,128,32,.15);border:1px solid rgba(245,128,32,.3);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:800;color:#F58020;flex-shrink:0;}
-.hdr{background:linear-gradient(135deg,#1a1208 0%,#1F2020 65%);border-bottom:1px solid #333435;padding:28px 24px 0;position:relative;overflow:hidden;}
-.hdr::after{display:none;}
-.hdr-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;}
-.brand-mark{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:5px;color:#F58020;opacity:.85;margin-bottom:6px;}
-.member-name{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;line-height:1;color:#FFFDF3;}
-.member-meta{font-size:11px;color:#6B6866;margin-top:4px;font-weight:400;}
-.tier-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid currentColor;}
-.pts-row{display:flex;align-items:flex-end;gap:10px;margin-bottom:18px;}
-.pts-val{font-family:'Bebas Neue',sans-serif;font-size:68px;line-height:1;color:#F58020;letter-spacing:-1px;}
-.pts-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#6B6866;margin-bottom:12px;font-weight:600;}
-.prog-labels{display:flex;justify-content:space-between;font-size:11px;color:#6B6866;margin-bottom:7px;font-weight:500;}
-.prog-track{height:3px;background:#333435;}
-.prog-fill{height:100%;transition:width 1.2s cubic-bezier(0.16,1,0.3,1);}
-.stats-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #333435;margin:18px -24px 0;}
-.stat-cell{padding:14px 10px;text-align:center;border-right:1px solid #333435;}
-.stat-cell:last-child{border-right:none;}
-.stat-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:#FFFDF3;}
-.stat-lbl{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#6B6866;margin-top:3px;font-weight:600;}
-.nav{display:flex;border-bottom:1px solid #333435;background:#252627;position:sticky;top:0;z-index:100;}
-.nav-btn{flex:1;padding:14px 4px;background:none;border:none;color:#6B6866;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:color .2s;position:relative;text-align:center;}
-.nav-btn.on{color:#F58020;}
-.nav-btn.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#F58020;}
-.content{padding:24px;animation:up .35s ease both;}
-@keyframes up{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.sec-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#6B6866;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
-.sec-label::after{content:'';flex:1;height:1px;background:#333435;}
-.act-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #333435;gap:12px;}
-.act-row:last-child{border-bottom:none;}
-.act-icon{width:36px;height:36px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-.act-label{font-size:14px;font-weight:500;color:#FFFDF3;}
-.act-date{font-size:11px;color:#6B6866;margin-top:2px;}
-.act-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;}
-.rewards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:14px;}
-.rwd-card{background:#2A2B2C;border:1px solid #333435;padding:18px 16px;position:relative;transition:border-color .2s,transform .2s;}
-.rwd-card:hover:not(.oos){border-color:#F58020;transform:translateY(-2px);}
-.rwd-card.oos{opacity:.42;}
-.rwd-icon{font-size:28px;margin-bottom:10px;display:block;}
-.rwd-cat{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#6B6866;margin-bottom:6px;font-weight:700;}
-.rwd-name{font-size:15px;font-weight:700;color:#FFFDF3;line-height:1.25;margin-bottom:12px;}
-.rwd-footer{display:flex;align-items:center;justify-content:space-between;}
-.rwd-cost{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#F58020;}
-.rdm-btn{padding:6px 14px;background:#F58020;border:none;color:#fff;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:background .15s;}
-.rdm-btn:hover{background:#F59340;}
-.rdm-btn:disabled{background:#333435;color:#6B6866;cursor:not-allowed;}
-.rdm-btn.pending-btn{background:#026F91;}
-.oos-tag{position:absolute;top:10px;right:10px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;background:#333435;color:#6B6866;padding:2px 7px;font-weight:700;}
-.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
-.pill{padding:5px 14px;border:1px solid #333435;background:none;color:#6B6866;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
-.pill.on,.pill:hover{border-color:#F58020;color:#F58020;background:rgba(245,128,32,.08);}
-.ch-card{background:#2A2B2C;border:1px solid #333435;padding:18px;margin-bottom:12px;transition:border-color .2s;}
-.ch-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
-.ch-icon-w{width:42px;height:42px;background:rgba(245,128,32,.1);border:1px solid rgba(245,128,32,.28);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
-.ch-name{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#FFFDF3;line-height:1;margin-bottom:4px;letter-spacing:1px;}
-.ch-desc{font-size:12px;color:#6B6866;}
-.ch-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
-.ch-dl{font-size:11px;color:#6B6866;font-weight:500;}
-.ch-rew{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#F58020;}
-.ch-track{height:4px;background:#333435;}
-.ch-fill{height:100%;background:linear-gradient(90deg,#026F91,#F58020);transition:width 1s cubic-bezier(0.16,1,0.3,1);}
-.ch-bar-lbl{display:flex;justify-content:space-between;font-size:11px;color:#6B6866;margin-top:6px;font-weight:500;}
-.lb-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #333435;gap:13px;}
-.lb-row:last-child{border-bottom:none;}
-.lb-row.me{background:rgba(245,128,32,.06);margin:0 -24px;padding-left:24px;padding-right:24px;border-left:2px solid #F58020;}
-.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#6B6866;width:28px;text-align:center;flex-shrink:0;}
-.lb-rank.top{color:#D4AF37;}
-.lb-av{width:36px;height:36px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:800;flex-shrink:0;background:#333435;color:#FFFDF3;}
-.lb-name{flex:1;font-size:14px;font-weight:500;}
-.lb-name .you{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#F58020;background:rgba(245,128,32,.14);padding:1px 5px;margin-left:7px;font-weight:700;}
-.lb-streak{font-size:12px;color:#6B6866;font-weight:500;}
-.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#FFFDF3;text-align:right;min-width:70px;}
-.tier-ladder{display:flex;border:1px solid #333435;overflow:hidden;margin-bottom:24px;}
-.tier-rung{flex:1;padding:14px 8px;text-align:center;border-right:1px solid #333435;}
-.tier-rung:last-child{border-right:none;}
-.tier-rung.cur{background:rgba(245,128,32,.07);}
-.tier-rung-icon{font-size:18px;display:block;margin-bottom:4px;}
-.tier-rung-name{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
-.tier-rung-min{font-size:10px;color:#6B6866;margin-top:3px;font-weight:500;}
-.earn-tbl{width:100%;border-collapse:collapse;}
-.earn-tbl tr{border-bottom:1px solid #333435;}
-.earn-tbl tr:last-child{border-bottom:none;}
-.earn-tbl td{padding:13px 8px;font-size:14px;vertical-align:middle;}
-.earn-action{color:#FFFDF3;font-weight:600;}
-.earn-note{color:#6B6866;font-size:11px;margin-top:2px;}
-.earn-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#F58020;text-align:right;white-space:nowrap;}
-.rdm-pending{background:rgba(2,111,145,.1);border:1px solid rgba(2,111,145,.3);padding:10px 14px;margin-bottom:14px;}
-.rdm-pending-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#026F91;font-weight:700;margin-bottom:8px;}
-.rdm-pending-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(2,111,145,.2);}
-.rdm-pending-item:last-child{border-bottom:none;}
-.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);background:#F58020;color:#fff;padding:12px 28px;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;z-index:1000;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#F58020;color:#fff;padding:11px 24px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;z-index:1000;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
-.icon-btn{background:none;border:1px solid #333435;color:#6B6866;padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:'Montserrat',sans-serif;transition:all .15s;}
-.icon-btn:hover{border-color:#F58020;color:#F58020;}
+
 ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:#1F2020;}::-webkit-scrollbar-thumb{background:#333435;}
 `;
 
+// ── TIER CELEBRATION ─────────────────────────────────────
+function TierCelebration({ tier, onDismiss }) {
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",padding:32,animation:"fadein .4s ease"}}>
+      <style>{`@keyframes fadein{from{opacity:0;}to{opacity:1;}} @keyframes bounce{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}`}</style>
+      <div style={{position:"absolute",inset:0,overflow:"hidden",pointerEvents:"none"}}>
+        {[...Array(30)].map((_,i)=>(<div key={i} style={{position:"absolute",width:`${6+Math.random()*8}px`,height:`${6+Math.random()*8}px`,borderRadius:2,left:`${Math.random()*100}%`,background:["#F58020","#D4AF37","#026F91","#FFFDF3","#22C55E"][i%5],animation:`fall ${1.5+Math.random()*2}s linear ${Math.random()*2}s infinite`}}/>))}
+      </div>
+      <style>{`@keyframes fall{from{transform:translateY(-20px) rotate(0deg);opacity:1;}to{transform:translateY(100vh) rotate(720deg);opacity:0;}}`}</style>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:80,color:tier.color,lineHeight:1,textAlign:"center",animation:"bounce 1s ease infinite",marginBottom:8}}>{tier.icon}</div>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:6,color:"#6B6866",textAlign:"center",marginBottom:8,textTransform:"uppercase"}}>You've reached</div>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:72,letterSpacing:4,color:tier.color,lineHeight:1,textAlign:"center"}}>{tier.name}</div>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:3,color:"#6B6866",textAlign:"center",marginTop:4,textTransform:"uppercase"}}>Tier</div>
+      <div style={{fontSize:14,color:"#FFFDF3",textAlign:"center",margin:"24px 0",fontWeight:500,lineHeight:1.6,maxWidth:280}}>You've earned your way to a new level. Keep pushing — every rep counts.</div>
+      <button onClick={onDismiss} style={{background:tier.color,border:"none",color:"#fff",padding:"14px 40px",fontFamily:"'Montserrat',sans-serif",fontSize:13,fontWeight:700,letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Let's Go! 💪</button>
+    </div>
+  );
+}
+
+// ── PIN INPUT ─────────────────────────────────────────────
 function PinInput({ value, onChange, label }) {
   const keys = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
   const handle = k => { if(k==="⌫") onChange(value.slice(0,-1)); else if(k==="") return; else if(value.length<4) onChange(value+k); };
@@ -232,87 +448,26 @@ function PinInput({ value, onChange, label }) {
   );
 }
 
-
-// ── TIER CELEBRATION ─────────────────────────────────────
-function TierCelebration({ tier, onDismiss }) {
-  return (
-    <div style={{
-      position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",
-      zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",
-      flexDirection:"column",padding:32,
-      animation:"fadein .4s ease"
-    }}>
-      <style>{`
-        @keyframes fadein{from{opacity:0;}to{opacity:1;}}
-        @keyframes bounce{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
-        .confetti-wrap{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
-        .confetti{position:absolute;width:8px;height:8px;border-radius:2px;animation:fall linear infinite;}
-        @keyframes fall{from{transform:translateY(-20px) rotate(0deg);opacity:1;}to{transform:translateY(100vh) rotate(720deg);opacity:0;}}
-      `}</style>
-      <div className="confetti-wrap">
-        {[...Array(30)].map((_,i)=>(
-          <div key={i} className="confetti" style={{
-            left:`${Math.random()*100}%`,
-            background:["#F58020","#D4AF37","#026F91","#FFFDF3","#22C55E"][i%5],
-            animationDuration:`${1.5+Math.random()*2}s`,
-            animationDelay:`${Math.random()*2}s`,
-            width:`${6+Math.random()*8}px`,
-            height:`${6+Math.random()*8}px`,
-          }}/>
-        ))}
-      </div>
-      <div style={{
-        fontFamily:"'Bebas Neue',sans-serif",fontSize:80,
-        color:tier.color,lineHeight:1,textAlign:"center",
-        animation:"bounce 1s ease infinite",
-        marginBottom:8,
-      }}>{tier.icon}</div>
-      <div style={{
-        fontFamily:"'Bebas Neue',sans-serif",
-        fontSize:14,letterSpacing:6,
-        color:"#6B6866",textAlign:"center",marginBottom:8,
-        textTransform:"uppercase"
-      }}>You've reached</div>
-      <div style={{
-        fontFamily:"'Bebas Neue',sans-serif",
-        fontSize:72,letterSpacing:4,
-        color:tier.color,lineHeight:1,textAlign:"center",
-      }}>{tier.name}</div>
-      <div style={{
-        fontFamily:"'Bebas Neue',sans-serif",
-        fontSize:14,letterSpacing:3,
-        color:"#6B6866",textAlign:"center",marginTop:4,
-        textTransform:"uppercase"
-      }}>Tier</div>
-      <div style={{
-        fontSize:14,color:"#FFFDF3",textAlign:"center",
-        margin:"24px 0",fontWeight:500,lineHeight:1.6,
-        maxWidth:300,
-      }}>
-        You've earned your way to a new level. Keep pushing — every rep counts.
-      </div>
-      <button onClick={onDismiss} style={{
-        background:tier.color,border:"none",color:"#fff",
-        padding:"14px 40px",fontFamily:"'Montserrat',sans-serif",
-        fontSize:13,fontWeight:700,letterSpacing:2,
-        textTransform:"uppercase",cursor:"pointer",
-      }}>Let's Go! 💪</button>
-    </div>
-  );
-}
-
+// ── LOGIN FLOW ────────────────────────────────────────────
 function LoginFlow({ onLogin }) {
-  const [stage,setStage]       = useState("phone");
-  const [phone,setPhone]       = useState("");
-  const [member,setMember]     = useState(null);
-  const [pin,setPin]           = useState("");
-  const [pin2,setPin2]         = useState("");
-  const [error,setError]       = useState("");
-  const [loading,setLoading]   = useState(false);
-  const [regName,setRegName]           = useState("");
-  const [regPhone,setRegPhone]         = useState("");
-  const [regBirthday,setRegBirthday]   = useState("");
-  const [regRefCode,setRegRefCode]     = useState("");
+  const [stage,setStage]           = useState("phone");
+  const [phone,setPhone]           = useState("");
+  const [member,setMember]         = useState(null);
+  const [pin,setPin]               = useState("");
+  const [pin2,setPin2]             = useState("");
+  const [error,setError]           = useState("");
+  const [loading,setLoading]       = useState(false);
+  const [regName,setRegName]       = useState("");
+  const [regPhone,setRegPhone]     = useState("");
+  const [regBirthday,setRegBirthday] = useState("");
+  const [regRefCode,setRegRefCode] = useState("");
+
+  // Pre-fill referral code from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) setRegRefCode(ref.toUpperCase());
+  }, []);
 
   const handlePhone = async () => {
     setError(""); setLoading(true);
@@ -335,8 +490,7 @@ function LoginFlow({ onLogin }) {
   const handleSetPin = () => { if(pin.length<4){setError("Enter all 4 digits.");return;} setPin2("");setError("");setStage("confirmpin"); };
 
   const handleConfirmPin = async () => {
-    if(pin2!==pin){setError("PINs don't match. Try again.");setPin2("");return;}
-    const { updateMemberPin } = await import("./supabase");
+    if(pin2!==pin){setError("PINs don't match.");setPin2("");return;}
     await updateMemberPin(member.id, pin);
     saveSession({ memberId: member.id });
     onLogin(member.id);
@@ -350,40 +504,19 @@ function LoginFlow({ onLogin }) {
     setLoading(true);
     const existing = await getMemberByPhone(regPhone);
     if(existing){setError("This number is already registered.");setLoading(false);return;}
-    // Generate referral code for new member
     const newId = genId("URZ");
     const refCode = "URUZ-" + newId.slice(-5).toUpperCase();
     const nm = { id:newId, name:regName.trim(), phone:regPhone.trim(), email:"", joinDate:today(), points:0, checkins:0, streak:0, status:"active", pin:null, birthday:regBirthday||null, referral_code:refCode };
     await upsertMember(nm);
-
-    // Process referral if code provided
     if (regRefCode.trim()) {
       const referrer = await getMemberByReferralCode(regRefCode.trim());
       if (referrer) {
         const REF_PTS = 500;
         await upsertMember({...referrer, points:(referrer.points||0)+REF_PTS});
-        await addReferral({
-          id: genId("REF"),
-          referrerId: referrer.id,
-          referrerName: referrer.name,
-          referrerCode: regRefCode.trim(),
-          newMemberId: nm.id,
-          newMemberName: nm.name,
-          pts: REF_PTS,
-          date: today(),
-        });
-        await addTransaction({
-          id: genId("TXN"),
-          memberId: referrer.id,
-          memberName: referrer.name,
-          type: "referral",
-          pts: REF_PTS,
-          note: `Referral — ${nm.name}`,
-          date: today(),
-        });
+        await addReferral({ id:genId("REF"), referrerId:referrer.id, referrerName:referrer.name, referrerCode:regRefCode.trim(), newMemberId:nm.id, newMemberName:nm.name, pts:REF_PTS, date:today() });
+        await addTransaction({ id:genId("TXN"), memberId:referrer.id, memberName:referrer.name, type:"referral", pts:REF_PTS, note:`Referral — ${nm.name}`, date:today() });
       }
     }
-
     setLoading(false);
     setMember({...nm, referral_code:refCode}); setPin(""); setStage("setpin");
   };
@@ -391,7 +524,7 @@ function LoginFlow({ onLogin }) {
   const LogoBox = () => (
     <div style={{textAlign:"center",marginBottom:0}}>
       <img src={LOGO_URL} alt="URUZ" style={{height:56,display:"block",margin:"0 auto 6px",width:"auto"}}/>
-      <div className="brand-sub">Loyalty Program</div>
+      <div className="brand-sub">Member Central</div>
     </div>
   );
 
@@ -399,190 +532,297 @@ function LoginFlow({ onLogin }) {
     <>
       <style>{CSS}</style>
       <div className="screen">
-        {stage==="phone"&&(
-          <div className="box">
-            <LogoBox/><div className="divider"/>
-            <div className="step-title">Welcome Back</div>
-            <label className="lbl">Your Phone Number</label>
-            <input className="inp" placeholder="+961 XX XXX XXX" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handlePhone()}/>
-            {error&&<div className="err">{error}</div>}
-            <button className="btn btn-primary" onClick={handlePhone} disabled={loading}>{loading?"Checking...":"Sign In"}</button>
-            <div className="hint">Not a member? <span className="link" onClick={()=>{setError("");setStage("register");}}>Register here</span></div>
-          </div>
-        )}
-        {stage==="pin"&&member&&(
-          <div className="box">
-            <LogoBox/><div className="divider"/>
-            <div className="member-chip">
-              <div className="chip-av">{initials(member.name)}</div>
-              <div><div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div><div style={{fontSize:11,color:"#6B6866"}}>{member.phone}</div></div>
-            </div>
-            <PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Enter your 4-digit PIN"/>
-            {error&&<div className="err">{error}</div>}
-            <button className="btn btn-ghost" style={{marginTop:8}} onClick={()=>{setStage("phone");setPin("");setMember(null);}}>Back</button>
-          </div>
-        )}
-        {stage==="setpin"&&member&&(
-          <div className="box">
-            <LogoBox/><div className="divider"/>
-            <div className="step-title">Create Your PIN</div>
-            <PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Choose a 4-digit PIN to secure your account"/>
-            {error&&<div className="err">{error}</div>}
-            <button className="btn btn-primary" onClick={handleSetPin} disabled={pin.length<4}>Continue</button>
-          </div>
-        )}
-        {stage==="confirmpin"&&(
-          <div className="box">
-            <LogoBox/><div className="divider"/>
-            <div className="step-title">Confirm PIN</div>
-            <PinInput value={pin2} onChange={v=>{setPin2(v);setError("");}} label="Enter your PIN again to confirm"/>
-            {error&&<div className="err">{error}</div>}
-          </div>
-        )}
-        {stage==="register"&&(
-          <div className="box">
-            <LogoBox/><div className="divider"/>
-            <div className="step-title">New Member</div>
-            <div className="step-sub">Register to start earning points from day one</div>
-            <label className="lbl">Full Name</label>
-            <input className="inp" placeholder="e.g. Alex Rivera" value={regName} onChange={e=>setRegName(e.target.value)}/>
-            <label className="lbl">Phone Number</label>
-            <input className="inp" placeholder="+961 XX XXX XXX" value={regPhone} onChange={e=>setRegPhone(e.target.value)}/>
-            <label className="lbl">Birthday (optional)</label>
-            <input className="inp" type="date" value={regBirthday} onChange={e=>setRegBirthday(e.target.value)} style={{marginBottom:14}}/>
-            <label className="lbl">Referral Code (optional)</label>
-            <input className="inp" placeholder="e.g. URUZ-ABC12" value={regRefCode} onChange={e=>setRegRefCode(e.target.value.toUpperCase())} style={{marginBottom:14}}/>
-            {error&&<div className="err">{error}</div>}
-            <button className="btn btn-primary" onClick={handleRegister} disabled={loading}>{loading?"Creating...":"Create Account"}</button>
-            <button className="btn btn-ghost" onClick={()=>{setStage("phone");setError("");}}>Back to Sign In</button>
-          </div>
-        )}
+        {stage==="phone"&&(<div className="box"><LogoBox/><div className="divider"/><div className="step-title">Welcome Back</div><label className="lbl">Your Phone Number</label><input className="inp" placeholder="+961 XX XXX XXX" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handlePhone()}/>{error&&<div className="err">{error}</div>}<button className="btn btn-primary" onClick={handlePhone} disabled={loading}>{loading?"Checking...":"Sign In"}</button><div className="hint">Not a member? <span className="link" onClick={()=>{setError("");setStage("register");}}>Register here</span></div></div>)}
+        {stage==="pin"&&member&&(<div className="box"><LogoBox/><div className="divider"/><div className="member-chip"><div className="chip-av">{initials(member.name)}</div><div><div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div><div style={{fontSize:11,color:"#6B6866"}}>{member.phone}</div></div></div><PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Enter your 4-digit PIN"/>{error&&<div className="err">{error}</div>}<button className="btn btn-ghost" style={{marginTop:8}} onClick={()=>{setStage("phone");setPin("");setMember(null);}}>Back</button></div>)}
+        {stage==="setpin"&&member&&(<div className="box"><LogoBox/><div className="divider"/><div className="step-title">Create Your PIN</div><PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Choose a 4-digit PIN to secure your account"/>{error&&<div className="err">{error}</div>}<button className="btn btn-primary" onClick={handleSetPin} disabled={pin.length<4}>Continue</button></div>)}
+        {stage==="confirmpin"&&(<div className="box"><LogoBox/><div className="divider"/><div className="step-title">Confirm PIN</div><PinInput value={pin2} onChange={v=>{setPin2(v);setError("");}} label="Enter your PIN again to confirm"/>{error&&<div className="err">{error}</div>}</div>)}
+        {stage==="register"&&(<div className="box"><LogoBox/><div className="divider"/><div className="step-title">Join URUZ</div><div className="step-sub">Start earning points from day one</div><label className="lbl">Full Name</label><input className="inp" placeholder="e.g. Alex Rivera" value={regName} onChange={e=>setRegName(e.target.value)}/><label className="lbl">Phone Number</label><input className="inp" placeholder="+961 XX XXX XXX" value={regPhone} onChange={e=>setRegPhone(e.target.value)}/><label className="lbl">Birthday (optional)</label><input className="inp" type="date" value={regBirthday} onChange={e=>setRegBirthday(e.target.value)} style={{marginBottom:14}}/><label className="lbl">Referral Code (optional)</label><input className="inp" placeholder="e.g. URUZ-ABC12" value={regRefCode} onChange={e=>setRegRefCode(e.target.value.toUpperCase())} style={{marginBottom:14}}/>{error&&<div className="err">{error}</div>}<button className="btn btn-primary" onClick={handleRegister} disabled={loading}>{loading?"Creating...":"Create Account"}</button><button className="btn btn-ghost" onClick={()=>{setStage("phone");setError("");}}>Back to Sign In</button></div>)}
       </div>
     </>
   );
 }
 
-function ActivityTab({ transactions, memberId }) {
-  const cfg={checkin:{e:"📍",bg:"rgba(2,111,145,.15)"},challenge:{e:"🏆",bg:"rgba(212,175,55,.15)"},referral:{e:"👥",bg:"rgba(34,197,94,.15)"},purchase:{e:"🛒",bg:"rgba(168,85,247,.15)"},redeem:{e:"🎟",bg:"rgba(239,68,68,.15)"},class:{e:"💪",bg:"rgba(245,128,32,.15)"},bonus:{e:"⭐",bg:"rgba(212,175,55,.15)"},manual:{e:"✏",bg:"rgba(168,85,247,.15)"},deduct:{e:"➖",bg:"rgba(239,68,68,.15)"}};
-  const myTxns=transactions.filter(t=>t.memberId===memberId||t.member_id===memberId).slice(0,15);
-  if(!myTxns.length) return <div style={{color:"#6B6866",fontSize:13,padding:"20px 0"}}>No activity yet. Check in today to start earning!</div>;
-  return (<div><div className="sec-label">Your Activity</div>{myTxns.map(a=>{const k=cfg[a.type]||cfg.checkin;return(<div key={a.id} className="act-row"><div className="act-icon" style={{background:k.bg}}>{k.e}</div><div style={{flex:1}}><div className="act-label">{a.note}</div><div className="act-date">{fmtDate(a.date)}</div></div><div className="act-pts" style={{color:a.pts>0?"#22C55E":"#EF4444"}}>{a.pts>0?"+":""}{a.pts}</div></div>);})}</div>);
-}
+// ── HOME TAB ──────────────────────────────────────────────
+function HomeTab({ member, members, transactions, tiers, challenges, enrollments }) {
+  const tier = getTier(member.points, tiers);
+  const next = getNext(member.points, tiers);
+  const tierPct = next ? Math.round(((member.points-tier.min)/(next.min-tier.min))*100) : 100;
+  const rank = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).findIndex(m=>m.id===member.id)+1;
+  const myTxns = transactions.filter(t=>t.memberId===member.id||t.member_id===member.id).slice(0,5);
+  const myEnrollments = enrollments.filter(e=>e.memberId===member.id||e.member_id===member.id).filter(e=>!e.completed).slice(0,2);
 
-function EarnTab({ tiers, memberPts, earnRules }) {
-  const cur=getTier(memberPts,tiers);
-  const rules = earnRules && earnRules.length > 0 ? earnRules : HOW_TO_EARN;
-  return (<div><div className="sec-label">Tier Path</div><div className="tier-ladder">{[...tiers].sort((a,b)=>a.min-b.min).map(t=>(<div key={t.id} className={`tier-rung${t.name===cur.name?" cur":""}`}><span className="tier-rung-icon">{t.icon}</span><div className="tier-rung-name" style={{color:t.color}}>{t.name}</div><div className="tier-rung-min">{t.min.toLocaleString()}+</div></div>))}</div><div className="sec-label">Ways to Earn</div><table className="earn-tbl"><tbody>{rules.map((e,i)=>(<tr key={e.id||i}><td style={{width:38,textAlign:"center",fontSize:20}}>{e.icon}</td><td><div className="earn-action">{e.action}</div><div className="earn-note">{e.note}</div></td><td className="earn-pts">{typeof e.pts==="number"?`+${e.pts}`:e.pts} <span style={{fontSize:11,color:"#6B6866"}}>PTS</span></td></tr>))}</tbody></table></div>);
-}
-
-function RewardsTab({ rewards, memberPts, myRedemptions, onRequest }) {
-  const [filter,setFilter]=useState("All");
-  const cats=["All","Access","Merch","Training"];
-  const list=filter==="All"?rewards:rewards.filter(r=>r.cat===filter);
-  const pendingNames=myRedemptions.filter(r=>r.status==="pending").map(r=>r.reward);
-  return (<div><div style={{marginBottom:18}}><div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",marginBottom:4,fontWeight:600}}>Your Balance</div><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:38,color:"#F58020",lineHeight:1}}>{memberPts.toLocaleString()} <span style={{fontSize:16,color:"#6B6866"}}>PTS</span></div></div>{myRedemptions.filter(r=>r.status==="pending").length>0&&(<div className="rdm-pending"><div className="rdm-pending-title">⏳ Pending Redemptions</div>{myRedemptions.filter(r=>r.status==="pending").map(r=>(<div key={r.id} className="rdm-pending-item"><span style={{fontSize:13,fontWeight:500}}>{r.reward}</span><span style={{fontSize:11,color:"#026F91",fontWeight:700}}>See front desk</span></div>))}</div>)}<div className="pills">{cats.map(c=><button key={c} className={`pill${filter===c?" on":""}`} onClick={()=>setFilter(c)}>{c}</button>)}</div><div className="rewards-grid">{list.map(r=>{const ip=pendingNames.includes(r.name);return(<div key={r.id} className={`rwd-card${!r.stock?" oos":""}`}>{!r.stock&&<span className="oos-tag">Sold Out</span>}<span className="rwd-icon">{r.icon}</span><div className="rwd-cat">{r.cat}</div><div className="rwd-name">{r.name}</div><div className="rwd-footer"><div className="rwd-cost">{r.pts.toLocaleString()}</div><button className={`rdm-btn${ip?" pending-btn":""}`} disabled={(!ip&&memberPts<r.pts)||!r.stock} onClick={()=>!ip&&onRequest(r)}>{ip?"Requested":memberPts<r.pts?"Need more":"Request"}</button></div></div>);})}</div></div>);
-}
-
-function ChallengesTab({ memberId, memberName, challenges }) {
-  const [enrollments, setEnrollments] = useState([]);
-  const [joining, setJoining]         = useState(null);
-  const [toastMsg, setToastMsg]       = useState("");
-  const [toastOn, setToastOn]         = useState(false);
-
-  const showToast = msg => { setToastMsg(msg); setToastOn(true); setTimeout(()=>setToastOn(false),2600); };
-
-  useEffect(() => {
-    if (memberId) getMemberEnrollments(memberId).then(setEnrollments);
-  }, [memberId]);
-
-  const isEnrolled = cid => enrollments.find(e => e.challengeId === String(cid));
-
-  const handleJoin = async (c) => {
-    if (joining) return;
-    setJoining(c.id);
-    const enrollment = {
-      id: genId("ENR"),
-      challengeId: String(c.id),
-      challengeName: c.name,
-      memberId,
-      memberName: memberName || "",
-      progress: 0,
-      goal: c.goal || 1,
-      enrolledDate: today(),
-    };
-    await enrollInChallenge(enrollment);
-    setEnrollments(prev => [...prev, {...enrollment, completed:false}]);
-    setJoining(null);
-    showToast(`Joined: ${c.name}!`);
-  };
+  const actCfg={checkin:{e:"📍",bg:"rgba(2,111,145,.15)"},challenge:{e:"🏆",bg:"rgba(212,175,55,.15)"},referral:{e:"👥",bg:"rgba(34,197,94,.15)"},purchase:{e:"🛒",bg:"rgba(168,85,247,.15)"},redeem:{e:"🎟",bg:"rgba(239,68,68,.15)"},class:{e:"💪",bg:"rgba(245,128,32,.15)"},bonus:{e:"⭐",bg:"rgba(212,175,55,.15)"},manual:{e:"✏",bg:"rgba(168,85,247,.15)"},deduct:{e:"➖",bg:"rgba(239,68,68,.15)"}};
 
   return (
     <div>
-      <div className="sec-label">Active Challenges</div>
-      {challenges.map(c => {
-        const enrolled  = isEnrolled(c.id);
-        const progress  = enrolled ? enrolled.progress : 0;
-        const goal      = c.goal || 1;
-        const pct       = Math.min(100, Math.round((progress/goal)*100));
-        const completed = enrolled?.completed;
-        return (
-          <div key={c.id} className="ch-card" style={{borderColor:completed?"#22C55E":enrolled?"rgba(245,128,32,.4)":undefined}}>
-            <div className="ch-top">
-              <div className="ch-icon-w">{c.icon}</div>
-              <div style={{flex:1}}>
-                <div className="ch-name">{c.name}</div>
-                <div className="ch-desc">{c.desc}</div>
+      {/* Hero */}
+      <div className="home-hero">
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+          <img src={LOGO_URL} alt="URUZ" style={{height:28,width:"auto"}}/>
+          <div style={{fontSize:10,letterSpacing:3,textTransform:"uppercase",color:"#6B6866",fontWeight:700}}>Member Central</div>
+        </div>
+        <div className="hero-name">Hey, {member.name.split(" ")[0]} 👋</div>
+        <div className="hero-sub">{member.id} · Member since {new Date(member.joinDate).toLocaleDateString("en-GB",{month:"short",year:"numeric"})}</div>
+        <div className="hero-pts">{member.points.toLocaleString()}</div>
+        <div className="hero-pts-lbl">Points</div>
+        <div className="tier-badge" style={{color:tier.color,borderColor:tier.color,background:`${tier.color}18`}}>{tier.icon} {tier.name}</div>
+        {next&&<div className="prog-bar-wrap"><div className="prog-labels"><span>{tier.name}</span><span style={{color:next.color}}>{(next.min-member.points).toLocaleString()} to {next.name}</span></div><div className="prog-track"><div className="prog-fill" style={{width:`${tierPct}%`,background:`linear-gradient(90deg,#026F91,#F58020)`}}/></div></div>}
+      </div>
+
+      {/* Stats */}
+      <div className="stats-row">
+        <div className="stat-cell"><div className="stat-num" style={{color:"#F58020"}}>#{rank}</div><div className="stat-lbl">Rank</div></div>
+        <div className="stat-cell"><div className="stat-num">🔥{member.streak}</div><div className="stat-lbl">Streak</div></div>
+        <div className="stat-cell"><div className="stat-num">{member.checkins}</div><div className="stat-lbl">Check-ins</div></div>
+      </div>
+
+      {/* Active Challenges */}
+      {myEnrollments.length > 0 && (
+        <div className="home-section">
+          <div className="sec-label">Active Challenges</div>
+          {myEnrollments.map(e=>{
+            const c = challenges.find(x=>String(x.id)===e.challengeId)||{};
+            const pct = Math.min(100,Math.round(((e.progress||0)/(e.goal||1))*100));
+            return (
+              <div key={e.id} className="quick-card" style={{flexDirection:"column",alignItems:"flex-start",gap:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,width:"100%"}}>
+                  <span style={{fontSize:20}}>{c.icon||"⚔"}</span>
+                  <div style={{flex:1}}><div className="qc-label">{c.name||e.challengeName}</div><div className="qc-sub">{pct}% complete</div></div>
+                  <div className="qc-pts">+{c.pts||0}</div>
+                </div>
+                <div style={{width:"100%",height:4,background:"#333435"}}><div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#026F91,#F58020)"}}/></div>
               </div>
-              {completed ? (
-                <div style={{background:"rgba(34,197,94,.15)",color:"#22C55E",padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase"}}>✓ Done</div>
-              ) : enrolled ? (
-                <div style={{background:"rgba(245,128,32,.15)",color:"#F58020",padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase"}}>Joined</div>
-              ) : (
-                <button onClick={()=>handleJoin(c)} disabled={joining===c.id}
-                  style={{background:"#F58020",border:"none",color:"#fff",padding:"6px 14px",fontFamily:"'Montserrat',sans-serif",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer"}}>
-                  {joining===c.id?"...":"Join"}
-                </button>
-              )}
+            );
+          })}
+        </div>
+      )}
+
+      {/* Recent Activity */}
+      <div className="home-section" style={{paddingBottom:20}}>
+        <div className="sec-label">Recent Activity</div>
+        {myTxns.length === 0 ? (
+          <div style={{color:"#6B6866",fontSize:13,padding:"20px 0",textAlign:"center"}}>No activity yet. Check in to start earning!</div>
+        ) : myTxns.map(a=>{
+          const k=actCfg[a.type]||actCfg.checkin;
+          return (
+            <div key={a.id} className="act-row">
+              <div className="act-icon" style={{background:k.bg}}>{k.e}</div>
+              <div style={{flex:1}}><div className="act-label">{a.note}</div><div className="act-date">{fmtDate(a.date)}</div></div>
+              <div className="act-pts" style={{color:a.pts>0?"#22C55E":"#EF4444"}}>{a.pts>0?"+":""}{a.pts}</div>
             </div>
-            <div className="ch-meta">
-              <span className="ch-dl">⏱ {c.deadline}</span>
-              <span className="ch-rew">+{c.pts} PTS</span>
-            </div>
-            {enrolled && <>
-              <div className="ch-track"><div className="ch-fill" style={{width:`${pct}%`}}/></div>
-              <div className="ch-bar-lbl"><span>{progress}/{goal} complete</span><span style={{color:pct>=100?"#22C55E":"#6B6866"}}>{pct}%</span></div>
-            </>}
-          </div>
-        );
-      })}
-      <div className={`toast${toastOn?" on":""}`}>✓ {toastMsg}</div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function LeaderboardTab({ members, memberId }) {
+// ── LOYALTY TAB ───────────────────────────────────────────
+function LoyaltyTab({ member, members, transactions, redemptions, rewards, tiers, challenges, earnRules, memberId, onRequest }) {
+  const [sub, setSub] = useState("activity");
+  const [enrollments, setEnrollments] = useState([]);
+  const [filter, setFilter] = useState("All");
+  const [toastMsg, setToastMsg] = useState(""); const [toastOn, setToastOn] = useState(false);
+  const showToast = msg => { setToastMsg(msg); setToastOn(true); setTimeout(()=>setToastOn(false),2600); };
+  const [joining, setJoining] = useState(null);
+
+  useEffect(() => { if(memberId) getMemberEnrollments(memberId).then(setEnrollments); }, [memberId]);
+
+  const myTxns = transactions.filter(t=>t.memberId===memberId||t.member_id===memberId).slice(0,20);
+  const myRdms = redemptions.filter(r=>r.memberId===memberId||r.member_id===memberId);
+  const pendingNames = myRdms.filter(r=>r.status==="pending").map(r=>r.reward);
+  const rules = earnRules && earnRules.length > 0 ? earnRules : HOW_TO_EARN;
+  const cur = getTier(member.points, tiers);
+
+  const handleJoin = async (c) => {
+    if(joining) return; setJoining(c.id);
+    const enrollment = { id:genId("ENR"), challengeId:String(c.id), challengeName:c.name, memberId, memberName:member.name, progress:0, goal:c.goal||1, enrolledDate:today() };
+    await enrollInChallenge(enrollment);
+    setEnrollments(prev=>[...prev,{...enrollment,completed:false}]);
+    setJoining(null); showToast(`Joined: ${c.name}!`);
+  };
+
+  const isEnrolled = cid => enrollments.find(e=>e.challengeId===String(cid));
+  const cats = ["All","Access","Merch","Training"];
+  const rewardList = filter==="All" ? rewards : rewards.filter(r=>r.cat===filter);
+
   const sorted=[...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points);
   const top10=sorted.slice(0,10);
   const meIdx=sorted.findIndex(m=>m.id===memberId);
   const me=sorted[meIdx];
-  return (<div><div className="sec-label">This Month's Rankings</div>{top10.map((m,i)=>{const r=i+1;const av=r===1?{background:"rgba(212,175,55,.22)",color:"#D4AF37",border:"1px solid rgba(212,175,55,.55)"}:r===2?{background:"rgba(168,169,173,.22)",color:"#A8A9AD",border:"1px solid rgba(168,169,173,.55)"}:r===3?{background:"rgba(205,127,50,.22)",color:"#CD7F32",border:"1px solid rgba(205,127,50,.55)"}:{};return(<div key={m.id} className={`lb-row${m.id===memberId?" me":""}`}><div className={`lb-rank${r<=3?" top":""}`}>{r}</div><div className="lb-av" style={av}>{initials(m.name)}</div><div className="lb-name">{m.name}{m.id===memberId&&<span className="you">You</span>}</div><div className="lb-streak">🔥 {m.streak}d</div><div className="lb-pts">{m.points.toLocaleString()}</div></div>);})}{me&&meIdx>=10&&<><div style={{textAlign:"center",padding:"10px 0",color:"#6B6866",fontSize:12}}>• • •</div><div className="lb-row me"><div className="lb-rank">{meIdx+1}</div><div className="lb-av" style={{background:"rgba(245,128,32,.22)",color:"#F58020",border:"1px solid rgba(245,128,32,.55)"}}>{initials(me.name)}</div><div className="lb-name">{me.name}<span className="you">You</span></div><div className="lb-streak">🔥 {me.streak}d</div><div className="lb-pts">{me.points.toLocaleString()}</div></div></>}</div>);
+
+  const actCfg={checkin:{e:"📍",bg:"rgba(2,111,145,.15)"},challenge:{e:"🏆",bg:"rgba(212,175,55,.15)"},referral:{e:"👥",bg:"rgba(34,197,94,.15)"},purchase:{e:"🛒",bg:"rgba(168,85,247,.15)"},redeem:{e:"🎟",bg:"rgba(239,68,68,.15)"},class:{e:"💪",bg:"rgba(245,128,32,.15)"},bonus:{e:"⭐",bg:"rgba(212,175,55,.15)"},manual:{e:"✏",bg:"rgba(168,85,247,.15)"},deduct:{e:"➖",bg:"rgba(239,68,68,.15)"}};
+
+  const SUBS=[{id:"activity",l:"Activity"},{id:"rewards",l:"Rewards"},{id:"challenges",l:"Challenges"},{id:"earn",l:"Earn"},{id:"rankings",l:"Rankings"}];
+
+  return (
+    <div>
+      <div className="loyalty-tabs">
+        {SUBS.map(s=><button key={s.id} className={`ltab${sub===s.id?" on":""}`} onClick={()=>setSub(s.id)}>{s.l}</button>)}
+      </div>
+      <div className="loyalty-wrap" key={sub}>
+
+        {sub==="activity"&&(
+          <div>{myTxns.length===0?<div style={{color:"#6B6866",fontSize:13,padding:"20px 0",textAlign:"center"}}>No activity yet!</div>:myTxns.map(a=>{const k=actCfg[a.type]||actCfg.checkin;return(<div key={a.id} className="act-row"><div className="act-icon" style={{background:k.bg}}>{k.e}</div><div style={{flex:1}}><div className="act-label">{a.note}</div><div className="act-date">{fmtDate(a.date)}</div></div><div className="act-pts" style={{color:a.pts>0?"#22C55E":"#EF4444"}}>{a.pts>0?"+":""}{a.pts}</div></div>);})}</div>
+        )}
+
+        {sub==="rewards"&&(
+          <div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",marginBottom:4,fontWeight:600}}>Balance</div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:32,color:"#F58020",lineHeight:1}}>{member.points.toLocaleString()} <span style={{fontSize:14,color:"#6B6866"}}>PTS</span></div>
+            </div>
+            {myRdms.filter(r=>r.status==="pending").length>0&&(<div className="rdm-pending"><div className="rdm-pending-title">⏳ Pending</div>{myRdms.filter(r=>r.status==="pending").map(r=>(<div key={r.id} className="rdm-pending-item"><span style={{fontSize:12,fontWeight:500}}>{r.reward}</span><span style={{fontSize:10,color:"#026F91",fontWeight:700}}>See front desk</span></div>))}</div>)}
+            <div className="pills">{cats.map(c=><button key={c} className={`pill${filter===c?" on":""}`} onClick={()=>setFilter(c)}>{c}</button>)}</div>
+            <div className="rewards-grid">{rewardList.map(r=>{const ip=pendingNames.includes(r.name);return(<div key={r.id} className={`rwd-card${!r.stock?" oos":""}`}>{!r.stock&&<span className="oos-tag">Out</span>}<span className="rwd-icon">{r.icon}</span><div className="rwd-cat">{r.cat}</div><div className="rwd-name">{r.name}</div><div className="rwd-footer"><div className="rwd-cost">{r.pts.toLocaleString()}</div><button className={`rdm-btn${ip?" pending-btn":""}`} disabled={(!ip&&member.points<r.pts)||!r.stock} onClick={()=>!ip&&onRequest(r)}>{ip?"Requested":member.points<r.pts?"Need more":"Request"}</button></div></div>);})}</div>
+          </div>
+        )}
+
+        {sub==="challenges"&&(
+          <div>
+            {challenges.map(c=>{const enrolled=isEnrolled(c.id);const progress=enrolled?enrolled.progress:0;const goal=c.goal||1;const pct=Math.min(100,Math.round((progress/goal)*100));const completed=enrolled?.completed;return(
+              <div key={c.id} className="ch-card" style={{borderColor:completed?"#22C55E":enrolled?"rgba(245,128,32,.4)":undefined}}>
+                <div className="ch-top">
+                  <div className="ch-icon-w">{c.icon}</div>
+                  <div style={{flex:1}}><div className="ch-name">{c.name}</div><div className="ch-desc">{c.desc}</div></div>
+                  {completed?(<div style={{background:"rgba(34,197,94,.15)",color:"#22C55E",padding:"3px 8px",fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase"}}>✓ Done</div>):enrolled?(<div style={{background:"rgba(245,128,32,.15)",color:"#F58020",padding:"3px 8px",fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase"}}>Joined</div>):(<button onClick={()=>handleJoin(c)} disabled={joining===c.id} style={{background:"#F58020",border:"none",color:"#fff",padding:"5px 12px",fontFamily:"'Montserrat',sans-serif",fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer"}}>{joining===c.id?"...":"Join"}</button>)}
+                </div>
+                <div className="ch-meta"><span className="ch-dl">⏱ {c.deadline}</span><span className="ch-rew">+{c.pts} PTS</span></div>
+                {enrolled&&<><div className="ch-track"><div className="ch-fill" style={{width:`${pct}%`}}/></div><div className="ch-bar-lbl"><span>{progress}/{goal}</span><span style={{color:pct>=100?"#22C55E":"#6B6866"}}>{pct}%</span></div></>}
+              </div>
+            );})}
+            <div className={`toast${toastOn?" on":""}`}>✓ {toastMsg}</div>
+          </div>
+        )}
+
+        {sub==="earn"&&(
+          <div>
+            <div className="sec-label" style={{marginBottom:12}}>Tier Path</div>
+            <div className="tier-ladder">{[...tiers].sort((a,b)=>a.min-b.min).map(t=>(<div key={t.id} className={`tier-rung${t.name===cur.name?" cur":""}`}><span className="tier-rung-icon">{t.icon}</span><div className="tier-rung-name" style={{color:t.color}}>{t.name}</div><div className="tier-rung-min">{t.min.toLocaleString()}+</div></div>))}</div>
+            <div className="sec-label" style={{marginBottom:12}}>Ways to Earn</div>
+            <table className="earn-tbl"><tbody>{rules.map((e,i)=>(<tr key={e.id||i}><td style={{width:36,textAlign:"center",fontSize:18}}>{e.icon}</td><td><div className="earn-action">{e.action}</div><div className="earn-note">{e.note}</div></td><td className="earn-pts">{typeof e.pts==="number"?`+${e.pts}`:e.pts} <span style={{fontSize:10,color:"#6B6866"}}>PTS</span></td></tr>))}</tbody></table>
+          </div>
+        )}
+
+        {sub==="rankings"&&(
+          <div>
+            <div className="sec-label" style={{marginBottom:12}}>This Month</div>
+            {top10.map((m,i)=>{const r=i+1;const av=r===1?{background:"rgba(212,175,55,.22)",color:"#D4AF37",border:"1px solid rgba(212,175,55,.55)"}:r===2?{background:"rgba(168,169,173,.22)",color:"#A8A9AD",border:"1px solid rgba(168,169,173,.55)"}:r===3?{background:"rgba(205,127,50,.22)",color:"#CD7F32",border:"1px solid rgba(205,127,50,.55)"}:{};return(<div key={m.id} className={`lb-row${m.id===memberId?" me":""}`}><div className={`lb-rank${r<=3?" top":""}`}>{r}</div><div className="lb-av" style={av}>{initials(m.name)}</div><div className="lb-name">{m.name}{m.id===memberId&&<span className="you">You</span>}</div><div className="lb-streak">🔥{m.streak}d</div><div className="lb-pts">{m.points.toLocaleString()}</div></div>);})}
+            {me&&meIdx>=10&&<><div style={{textAlign:"center",padding:"10px 0",color:"#6B6866",fontSize:12}}>• • •</div><div className="lb-row me"><div className="lb-rank">{meIdx+1}</div><div className="lb-av" style={{background:"rgba(245,128,32,.22)",color:"#F58020",border:"1px solid rgba(245,128,32,.55)"}}>{initials(me.name)}</div><div className="lb-name">{me.name}<span className="you">You</span></div><div className="lb-streak">🔥{me.streak}d</div><div className="lb-pts">{me.points.toLocaleString()}</div></div></>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
-const TABS=[{id:"activity",label:"Activity"},{id:"earn",label:"Earn"},{id:"rewards",label:"Rewards"},{id:"challenges",label:"Challenges"},{id:"leaderboard",label:"Rankings"}];
+// ── WORKOUTS TAB ─────────────────────────────────────────
+function WorkoutsTab() {
+  return (
+    <div className="coming-soon">
+      <div className="cs-icon">💪</div>
+      <div className="cs-title">Workouts</div>
+      <div className="cs-sub">Your personalized workout library is coming soon. Free workouts, exclusive content, and more — all in one place.</div>
+    </div>
+  );
+}
 
-export default function MemberPortal() {
-  const [memberId,setMemberId]   = useState(null);
-  const [member,setMember]       = useState(null);
-  const [members,setMembers]     = useState([]);
-  const [transactions,setTxns]   = useState([]);
-  const [redemptions,setRdms]    = useState([]);
-  const [rewards,setRewards]     = useState(DEF_REWARDS);
-  const [tiers,setTiers]         = useState(DEF_TIERS);
+// ── PROFILE TAB ───────────────────────────────────────────
+function ProfileTab({ member, tiers, onLogout, onRefresh }) {
+  const tier = getTier(member.points, tiers);
+  const next = getNext(member.points, tiers);
+  const tierPct = next ? Math.round(((member.points-tier.min)/(next.min-tier.min))*100) : 100;
+
+  const copyCode = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(member.referral_code||"");
+    }
+  };
+
+  return (
+    <div className="profile-wrap">
+      <div className="profile-header">
+        <div className="profile-av">{initials(member.name)}</div>
+        <div>
+          <div className="profile-name">{member.name}</div>
+          <div className="profile-id">{member.id}</div>
+          <div className="profile-tier" style={{color:tier.color}}>{tier.icon} {tier.name} Member</div>
+        </div>
+      </div>
+
+      {/* Points & Tier */}
+      <div className="profile-section">
+        <div className="profile-section-title">Points & Tier</div>
+        <div className="profile-row">
+          <span className="profile-row-label">Current Balance</span>
+          <span className="profile-row-value" style={{color:"#F58020",fontFamily:"'Bebas Neue',sans-serif",fontSize:22}}>{member.points.toLocaleString()} pts</span>
+        </div>
+        <div className="profile-row">
+          <span className="profile-row-label">Current Tier</span>
+          <span className="profile-row-value" style={{color:tier.color}}>{tier.icon} {tier.name}</span>
+        </div>
+        {next&&<div className="profile-row">
+          <span className="profile-row-label">Next Tier</span>
+          <span className="profile-row-value" style={{color:next.color}}>{(next.min-member.points).toLocaleString()} pts to {next.name}</span>
+        </div>}
+        {next&&<div style={{padding:"0 16px 14px"}}>
+          <div style={{height:4,background:"#333435",marginTop:4}}>
+            <div style={{height:"100%",width:`${tierPct}%`,background:`linear-gradient(90deg,#026F91,#F58020)`}}/>
+          </div>
+        </div>}
+      </div>
+
+      {/* Details */}
+      <div className="profile-section">
+        <div className="profile-section-title">My Details</div>
+        <div className="profile-row"><span className="profile-row-label">Phone</span><span className="profile-row-value">{member.phone}</span></div>
+        <div className="profile-row"><span className="profile-row-label">Member Since</span><span className="profile-row-value">{member.joinDate?new Date(member.joinDate).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"—"}</span></div>
+        <div className="profile-row"><span className="profile-row-label">Birthday</span><span className="profile-row-value">{member.birthday?new Date(member.birthday+"T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"long"}):"Not set"}</span></div>
+        <div className="profile-row"><span className="profile-row-label">Check-ins</span><span className="profile-row-value">{member.checkins}</span></div>
+        <div className="profile-row"><span className="profile-row-label">Streak</span><span className="profile-row-value">🔥 {member.streak} days</span></div>
+      </div>
+
+      {/* Referral */}
+      {member.referral_code && (
+        <div className="ref-box">
+          <div className="profile-section-title" style={{padding:0,border:"none",marginBottom:10}}>Your Referral Code</div>
+          <div className="ref-code" onClick={copyCode} style={{cursor:"pointer"}}>{member.referral_code}</div>
+          <div className="ref-hint">Share this code with friends. When they join URUZ and enter your code, you earn <strong style={{color:"#F58020"}}>500 points!</strong><br/>Tap the code to copy it.</div>
+          <div style={{marginTop:12,fontSize:11,color:"#6B6866",textAlign:"center"}}>
+            Or share this link:<br/>
+            <span style={{color:"#F58020",fontWeight:700,fontSize:12}}>loyalty.uruzathletics.fit?ref={member.referral_code}</span>
+          </div>
+        </div>
+      )}
+
+      <button className="btn btn-ghost" onClick={onRefresh} style={{marginBottom:8}}>↻ Refresh Data</button>
+      <button className="btn-signout" onClick={onLogout}>Sign Out</button>
+    </div>
+  );
+}
+
+// ── ROOT ──────────────────────────────────────────────────
+const BOTTOM_TABS = [
+  { id:"home",     icon:"🏠", label:"Home"     },
+  { id:"workouts", icon:"💪", label:"Workouts" },
+  { id:"loyalty",  icon:"⭐", label:"Loyalty"  },
+  { id:"profile",  icon:"👤", label:"Profile"  },
+];
+
+export default function MemberCentral() {
+  const [memberId,setMemberId]     = useState(null);
+  const [member,setMember]         = useState(null);
+  const [members,setMembers]       = useState([]);
+  const [transactions,setTxns]     = useState([]);
+  const [redemptions,setRdms]      = useState([]);
+  const [rewards,setRewards]       = useState(DEF_REWARDS);
+  const [tiers,setTiers]           = useState(DEF_TIERS);
   const [challenges,setChallenges] = useState(DEF_CHALLENGES);
   const [earnRules,setEarnRules]   = useState(HOW_TO_EARN);
-  const [tab,setTab]             = useState("activity");
-  const [loaded,setLoaded]       = useState(false);
-  const [toast,setToast]         = useState({msg:"",on:false});
+  const [enrollments,setEnrollments] = useState([]);
+  const [tab,setTab]               = useState("home");
+  const [loaded,setLoaded]         = useState(false);
+  const [toast,setToast]           = useState({msg:"",on:false});
   const [tierCelebration,setTierCelebration] = useState(null);
 
   const showToast = msg => { setToast({msg,on:true}); setTimeout(()=>setToast(t=>({...t,on:false})),2600); };
@@ -592,70 +832,47 @@ export default function MemberPortal() {
     const [m,t,r,rw,ti,ds,er] = await Promise.all([
       getMembers(), getTransactions(), getRedemptions(), getRewards(), getTiers(), getDisplaySettings(), getEarnRules()
     ]);
-    if (er && er.length > 0) setEarnRules(er.filter(r=>r.active));
     const normalized = m.map(normalizeMember);
     setMembers(normalized); setTxns(t); setRdms(r);
     setRewards(rw.length?rw:DEF_REWARDS);
     setTiers(ti.length?ti:DEF_TIERS);
-    if (ds) {
-      try {
-        const settings = JSON.parse(ds.config||"{}");
-        if (settings.challenges && settings.challenges.length > 0) {
-          setChallenges(settings.challenges.filter(c=>c.active!==false));
-        }
-      } catch {}
-    }
+    if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
+    if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length) setChallenges(cfg.challenges.filter(c=>c.active!==false));}catch{}}
     const found = normalized.find(x=>x.id===mid);
     setMember(found||null);
     setLoaded(true);
 
-    // Check for tier upgrade since last visit
-    if (found) {
-      const tierKey = `uruz:tier:${found.id}`;
-      const lastTier = localStorage.getItem(tierKey);
-      const currentTier = [...(ti.length?ti:DEF_TIERS)].sort((a,b)=>b.min-a.min).find(t=>found.points>=t.min);
-      if (currentTier && lastTier && lastTier !== currentTier.name) {
-        setTierCelebration(currentTier);
-      }
-      if (currentTier) localStorage.setItem(tierKey, currentTier.name);
+    // Tier upgrade check
+    if(found){
+      const tierKey=`uruz:tier:${found.id}`;
+      const lastTier=localStorage.getItem(tierKey);
+      const currentTier=[...(ti.length?ti:DEF_TIERS)].sort((a,b)=>b.min-a.min).find(t=>found.points>=t.min);
+      if(currentTier&&lastTier&&lastTier!==currentTier.name) setTierCelebration(currentTier);
+      if(currentTier) localStorage.setItem(tierKey,currentTier.name);
     }
 
-    // Generate referral code if member doesn't have one
-    if (found && !found.referral_code) {
-      const refCode = "URUZ-" + found.id.slice(-5).toUpperCase();
-      await upsertMember({...found, referral_code: refCode});
-      const updatedM = normalized.map(x => x.id===found.id ? {...x, referral_code:refCode} : x);
-      setMembers(updatedM);
-      setMember({...found, referral_code:refCode});
+    // Generate referral code if missing
+    if(found&&!found.referral_code){
+      const refCode="URUZ-"+found.id.slice(-5).toUpperCase();
+      await upsertMember({...found,referral_code:refCode});
     }
 
-    // Auto-award birthday bonus if today is their birthday
-    if (found && found.birthday) {
-      const todayStr = new Date().toISOString().slice(5,10); // MM-DD
-      const bday = found.birthday.slice(5,10); // MM-DD from YYYY-MM-DD
-      const lastBdayKey = `uruz:bday:${found.id}:${new Date().getFullYear()}`;
-      const alreadyAwarded = localStorage.getItem(lastBdayKey);
-      if (todayStr === bday && !alreadyAwarded) {
-        const BDAY_PTS = 300;
-        const newPoints = found.points + BDAY_PTS;
-        await upsertMember({...found, points: newPoints});
-        const txn = {
-          id: genId("TXN"),
-          memberId: found.id,
-          memberName: found.name,
-          type: "bonus",
-          pts: BDAY_PTS,
-          note: "🎂 Birthday Bonus!",
-          date: today()
-        };
-        await addTransaction(txn);
-        localStorage.setItem(lastBdayKey, "1");
-        // Update member in state
-        const updatedMembers = normalized.map(x => x.id===found.id ? {...x,points:newPoints} : x);
-        setMembers(updatedMembers);
-        setMember({...found, points: newPoints});
+    // Birthday bonus
+    if(found&&found.birthday){
+      const todayStr=new Date().toISOString().slice(5,10);
+      const bday=found.birthday.slice(5,10);
+      const bdayKey=`uruz:bday:${found.id}:${new Date().getFullYear()}`;
+      if(todayStr===bday&&!localStorage.getItem(bdayKey)){
+        const BDAY_PTS=300;
+        const newPoints=found.points+BDAY_PTS;
+        await upsertMember({...found,points:newPoints});
+        await addTransaction({id:genId("TXN"),memberId:found.id,memberName:found.name,type:"bonus",pts:BDAY_PTS,note:"🎂 Birthday Bonus!",date:today()});
+        localStorage.setItem(bdayKey,"1");
       }
     }
+
+    // Load enrollments
+    if(mid) getMemberEnrollments(mid).then(setEnrollments);
   };
 
   useEffect(()=>{
@@ -664,64 +881,38 @@ export default function MemberPortal() {
   },[]);
 
   const handleLogin=(id)=>{setMemberId(id);loadData(id);};
-
+  const handleLogout=()=>{clearSession();setMemberId(null);setMember(null);setLoaded(false);};
   const handleRequest=async(reward)=>{
     const rdm={id:genId("RDM"),memberId:member.id,memberName:member.name,reward:reward.name,pts:reward.pts,status:"pending",date:today()};
-    await addRedemption(rdm);
-    setRdms(prev=>[rdm,...prev]);
+    await addRedemption(rdm);setRdms(prev=>[rdm,...prev]);
     showToast(`Requested: ${reward.name} — see the front desk`);
   };
 
-  const handleLogout=()=>{clearSession();setMemberId(null);setMember(null);setLoaded(false);};
-
   if(!memberId) return <LoginFlow onLogin={handleLogin}/>;
-  if(!loaded) return (<><style>{CSS}</style><div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#1F2020"}}><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:4,color:"#F58020"}}>LOADING…</div></div></>);
-  if(!member) return (<><style>{CSS}</style><div className="screen"><div className="box"><img src={LOGO_URL} alt="URUZ" style={{height:56,display:"block",margin:"0 auto 6px",width:"auto"}}/><div className="brand-sub">Loyalty Program</div><div className="divider"/><div className="step-title">Account Not Found</div><div className="step-sub">Your account could not be loaded. Please sign in again or contact the front desk.</div><button className="btn btn-primary" onClick={handleLogout}>Back to Sign In</button></div></div></>);
-
-  const tier=getTier(member.points,tiers);
-  const next=getNext(member.points,tiers);
-  const tierPct=next?Math.round(((member.points-tier.min)/(next.min-tier.min))*100):100;
-  const rank=[...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).findIndex(m=>m.id===member.id)+1;
-  const myRdms=redemptions.filter(r=>r.memberId===member.id||r.member_id===member.id);
+  if(!loaded||!member) return(<><style>{CSS}</style><div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#1F2020"}}><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:4,color:"#F58020"}}>LOADING…</div></div></>);
 
   return (
     <>
       <style>{CSS}</style>
       <div className="app">
-        <div className="hdr">
-          <div className="hdr-top">
-            <div>
-              <div style={{marginBottom:8}}>
-                <img src={LOGO_URL} alt="URUZ" style={{height:52,width:"auto"}}/>
-              </div>
-              <div className="member-name">{member.name}</div>
-              <div className="member-meta">Member since {new Date(member.joinDate).toLocaleDateString("en-GB",{month:"short",year:"numeric"})} · {member.id}</div>
-              {member.referral_code && <div style={{fontSize:11,color:"#F58020",marginTop:3,fontWeight:700,letterSpacing:1}}>Referral: {member.referral_code}</div>}
-            </div>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
-              <div className="tier-badge" style={{color:tier.color,borderColor:tier.color,background:`${tier.color}18`}}>{tier.icon} {tier.name}</div>
-              <div style={{display:"flex",gap:6}}>
-                <button className="icon-btn" onClick={()=>loadData()}>↻</button>
-                <button className="icon-btn" onClick={handleLogout}>Sign Out</button>
-              </div>
-            </div>
-          </div>
-          <div className="pts-row"><div className="pts-val">{member.points.toLocaleString()}</div><div className="pts-lbl">Points</div></div>
-          {next&&<><div className="prog-labels"><span>{tier.name}</span><span style={{color:next.color}}>{(next.min-member.points).toLocaleString()} to {next.name}</span></div><div className="prog-track"><div className="prog-fill" style={{width:`${tierPct}%`,background:`linear-gradient(90deg,#026F91,#F58020)`}}/></div></>}
-          <div className="stats-strip">
-            <div className="stat-cell"><div className="stat-num" style={{color:"#F58020"}}>#{rank}</div><div className="stat-lbl">Club Rank</div></div>
-            <div className="stat-cell"><div className="stat-num">🔥 {member.streak}</div><div className="stat-lbl">Day Streak</div></div>
-            <div className="stat-cell"><div className="stat-num">{member.checkins}</div><div className="stat-lbl">Check-ins</div></div>
-          </div>
-        </div>
-        <div className="nav">{TABS.map(t=><button key={t.id} className={`nav-btn${tab===t.id?" on":""}`} onClick={()=>setTab(t.id)}>{t.label}</button>)}</div>
         <div className="content" key={tab}>
-          {tab==="activity"   &&<ActivityTab transactions={transactions} memberId={member.id}/>}
-          {tab==="earn"       &&<EarnTab tiers={tiers} memberPts={member.points} earnRules={earnRules}/>}
-          {tab==="rewards"    &&<RewardsTab rewards={rewards} memberPts={member.points} myRedemptions={myRdms} onRequest={handleRequest}/>}
-          {tab==="challenges" &&<ChallengesTab memberId={member.id} memberName={member.name} challenges={challenges}/>}
-          {tab==="leaderboard"&&<LeaderboardTab members={members} memberId={member.id}/>}
+          {tab==="home"     && <HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments}/>}
+          {tab==="workouts" && <WorkoutsTab/>}
+          {tab==="loyalty"  && <LoyaltyTab member={member} members={members} transactions={transactions} redemptions={redemptions} rewards={rewards} tiers={tiers} challenges={challenges} earnRules={earnRules} memberId={member.id} onRequest={handleRequest}/>}
+          {tab==="profile"  && <ProfileTab member={member} tiers={tiers} onLogout={handleLogout} onRefresh={()=>loadData()}/>}
         </div>
+
+        {/* Bottom Navigation */}
+        <div className="bottom-nav">
+          {BOTTOM_TABS.map(t=>(
+            <button key={t.id} className={`nav-item${tab===t.id?" active":""}`} onClick={()=>setTab(t.id)}>
+              <span className="nav-icon">{t.icon}</span>
+              <span className="nav-label">{t.label}</span>
+              <div className="nav-dot"/>
+            </button>
+          ))}
+        </div>
+
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
         {tierCelebration && <TierCelebration tier={tierCelebration} onDismiss={()=>setTierCelebration(null)}/>}
       </div>
