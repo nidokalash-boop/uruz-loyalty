@@ -233,8 +233,7 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .loyalty-tabs{
   display:flex;border-bottom:1px solid #333435;
   margin-bottom:20px;
-  position:sticky;top:57px;
-  background:#1F2020;z-index:90;
+  background:#1F2020;
 }
 .ltab{
   flex:1;padding:12px 4px;background:none;border:none;
