@@ -116,7 +116,17 @@ export default function CheckIn() {
     const m=normalizeMember(fresh);
     if(m.lastCheckin===today()){setResult({type:"already"});setStage("result");setLoading(false);return;}
     const CHECKIN_PTS=50;
-    const updated={...m,points:m.points+CHECKIN_PTS,checkins:m.checkins+1,lastCheckin:today()};
+    // Calculate streak — gym is closed Sundays, so allow 2-day gap
+const lastDate = m.lastCheckin ? new Date(m.lastCheckin) : null;
+const todayDate = new Date(today());
+const diffDays = lastDate ? Math.round((todayDate - lastDate) / (1000*60*60*24)) : 999;
+
+// Allow 1-day gap normally, or 2-day gap if Sunday falls in between
+const dayOfWeek = todayDate.getDay(); // 0=Sun, 1=Mon...
+const allowedGap = dayOfWeek === 1 ? 2 : 1; // Monday allows 2-day gap (covers Sunday closure)
+const newStreak = lastDate && diffDays <= allowedGap ? m.streak + 1 : 1;
+
+const updated={...m,points:m.points+CHECKIN_PTS,checkins:m.checkins+1,lastCheckin:today(),streak:newStreak};
     await upsertMember(updated);
     await addTransaction({id:genId("TXN"),memberId:m.id,memberName:m.name,type:"checkin",pts:CHECKIN_PTS,note:"QR Check-in",date:today()});
     setMember(updated);
