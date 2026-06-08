@@ -218,3 +218,39 @@ export async function getMemberByReferralCode(code) {
   const { data } = await supabase.from('members').select('*').ilike('referral_code', code).single()
   return data || null
 }
+
+// ── WORKOUTS ─────────────────────────────────────────────
+export async function getWorkouts() {
+  const { data } = await supabase.from('workouts').select('*').eq('active', true).order('created_at', { ascending: false })
+  return data || []
+}
+export async function getAllWorkouts() {
+  const { data } = await supabase.from('workouts').select('*').order('created_at', { ascending: false })
+  return data || []
+}
+export async function upsertWorkout(workout) {
+  const { data } = await supabase.from('workouts').upsert(workout).select().single()
+  return data
+}
+export async function deleteWorkout(id) {
+  await supabase.from('workouts').delete().eq('id', id)
+}
+
+// ── WORKOUT UNLOCKS ───────────────────────────────────────
+export async function getMemberUnlocks(memberId) {
+  const { data } = await supabase.from('workout_unlocks').select('*').eq('member_id', memberId)
+  return (data || []).map(u => ({ ...u, workoutId: u.workout_id, memberId: u.member_id }))
+}
+export async function unlockWorkout(unlock) {
+  await supabase.from('workout_unlocks').insert({
+    id: unlock.id,
+    workout_id: unlock.workoutId,
+    member_id: unlock.memberId,
+    unlocked_by: unlock.unlockedBy || 'staff',
+    date: unlock.date,
+  })
+}
+export async function getAllUnlocks() {
+  const { data } = await supabase.from('workout_unlocks').select('*')
+  return (data || []).map(u => ({ ...u, workoutId: u.workout_id, memberId: u.member_id }))
+}
