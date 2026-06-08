@@ -232,8 +232,9 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .loyalty-wrap{padding:0 20px;}
 .loyalty-tabs{
   display:flex;border-bottom:1px solid #333435;
-  margin-bottom:20px;
+  margin-bottom:0;
   background:#1F2020;
+  flex-shrink:0;
 }
 .ltab{
   flex:1;padding:12px 4px;background:none;border:none;
@@ -655,11 +656,11 @@ function LoyaltyTab({ member, members, transactions, redemptions, rewards, tiers
   const SUBS=[{id:"activity",l:"Activity"},{id:"rewards",l:"Rewards"},{id:"challenges",l:"Challenges"},{id:"earn",l:"Earn"},{id:"rankings",l:"Rankings"}];
 
   return (
-    <div>
+    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 64px)"}}>
       <div className="loyalty-tabs">
         {SUBS.map(s=><button key={s.id} className={`ltab${sub===s.id?" on":""}`} onClick={()=>setSub(s.id)}>{s.l}</button>)}
       </div>
-      <div className="loyalty-wrap" key={sub}>
+      <div className="loyalty-wrap" key={sub} style={{flex:1,overflowY:"auto",paddingTop:16}}>
 
         {sub==="activity"&&(
           <div>{myTxns.length===0?<div style={{color:"#6B6866",fontSize:13,padding:"20px 0",textAlign:"center"}}>No activity yet!</div>:myTxns.map(a=>{const k=actCfg[a.type]||actCfg.checkin;return(<div key={a.id} className="act-row"><div className="act-icon" style={{background:k.bg}}>{k.e}</div><div style={{flex:1}}><div className="act-label">{a.note}</div><div className="act-date">{fmtDate(a.date)}</div></div><div className="act-pts" style={{color:a.pts>0?"#22C55E":"#EF4444"}}>{a.pts>0?"+":""}{a.pts}</div></div>);})}</div>
