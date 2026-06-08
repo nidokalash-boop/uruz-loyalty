@@ -319,7 +319,7 @@ export default function GymDisplay() {
           <div className="topbar-brand">
             <img src={LOGO_URL} alt="URUZ" style={{height:36,width:"auto"}}/>
             <div className="brand-sep"/>
-            <div className="brand-sub">Loyalty Program</div>
+            <div className="brand-sub">Member Central</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:20}}>
             <div className="live-badge"><div className="live-dot"/>Live</div>
