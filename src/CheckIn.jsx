@@ -64,6 +64,10 @@ body,#root{background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .chip-av{width:36px;height:36px;background:rgba(245,128,32,.15);border:1px solid rgba(245,128,32,.3);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:800;color:#F58020;flex-shrink:0;}
 .ci-icon{font-size:64px;margin-bottom:16px;display:block;text-align:center;animation:pop .4s cubic-bezier(0.16,1,0.3,1);}
 @keyframes pop{from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+.stats-strip{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#333435;margin-top:20px;}
+.stat-cell{background:#252627;padding:12px 8px;text-align:center;}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;}
+.stat-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;margin-top:2px;font-weight:700;}
 `;
 
 function PinInput({ value, onChange, label }) {
@@ -73,13 +77,13 @@ function PinInput({ value, onChange, label }) {
 }
 
 export default function CheckIn() {
-  const [stage,setStage]   = useState("loading");
-  const [member,setMember] = useState(null);
-  const [phone,setPhone]   = useState("");
-  const [pin,setPin]       = useState("");
-  const [error,setError]   = useState("");
+  const [stage,setStage]     = useState("loading");
+  const [member,setMember]   = useState(null);
+  const [phone,setPhone]     = useState("");
+  const [pin,setPin]         = useState("");
+  const [error,setError]     = useState("");
   const [loading,setLoading] = useState(false);
-  const [result,setResult] = useState(null);
+  const [result,setResult]   = useState(null);
 
   useEffect(()=>{
     (async()=>{
@@ -114,37 +118,66 @@ export default function CheckIn() {
     setLoading(true);
     const fresh=await getMemberById(member.id);
     const m=normalizeMember(fresh);
-    if(m.lastCheckin===today()){setResult({type:"already"});setStage("result");setLoading(false);return;}
-    const CHECKIN_PTS=50;
-    // Calculate streak — gym is closed Sundays, so allow 2-day gap
-const lastDate = m.lastCheckin ? new Date(m.lastCheckin) : null;
-const todayDate = new Date(today());
-const diffDays = lastDate ? Math.round((todayDate - lastDate) / (1000*60*60*24)) : 999;
 
-// Allow 1-day gap normally, or 2-day gap if Sunday falls in between
-const dayOfWeek = todayDate.getDay(); // 0=Sun, 1=Mon...
-const allowedGap = dayOfWeek === 1 ? 2 : 1; // Monday allows 2-day gap (covers Sunday closure)
-const newStreak = lastDate && diffDays <= allowedGap ? m.streak + 1 : 1;
+    // Already checked in today
+    if(m.lastCheckin===today()){
+      setResult({type:"already"});
+      setStage("result");
+      setLoading(false);
+      return;
+    }
 
-const updated={...m,points:m.points+CHECKIN_PTS,checkins:m.checkins+1,lastCheckin:today(),streak:newStreak};
+    const CHECKIN_PTS = 50;
+
+    // Calculate streak — gym closed Sundays, allow 2-day gap on Mondays
+    const lastDate   = m.lastCheckin ? new Date(m.lastCheckin) : null;
+    const todayDate  = new Date(today());
+    const diffDays   = lastDate ? Math.round((todayDate - lastDate) / (1000*60*60*24)) : 999;
+    const dayOfWeek  = todayDate.getDay(); // 0=Sun, 1=Mon
+    const allowedGap = dayOfWeek === 1 ? 2 : 1; // Monday allows 2-day gap for Sunday closure
+    const newStreak  = lastDate && diffDays <= allowedGap ? m.streak + 1 : 1;
+
+    const updated = {
+      ...m,
+      points:      m.points + CHECKIN_PTS,
+      checkins:    m.checkins + 1,
+      streak:      newStreak,
+      lastCheckin: today(),
+    };
+
     await upsertMember(updated);
-    await addTransaction({id:genId("TXN"),memberId:m.id,memberName:m.name,type:"checkin",pts:CHECKIN_PTS,note:"QR Check-in",date:today()});
+    await addTransaction({
+      id:         genId("TXN"),
+      memberId:   m.id,
+      memberName: m.name,
+      type:       "checkin",
+      pts:        CHECKIN_PTS,
+      note:       "QR Check-in",
+      date:       today(),
+    });
+
     setMember(updated);
-    setResult({type:"success",pts:CHECKIN_PTS,total:updated.points});
-    setStage("result");setLoading(false);
+    setResult({ type:"success", pts:CHECKIN_PTS, total:updated.points, streak:newStreak });
+    setStage("result");
+    setLoading(false);
   };
 
   return (
     <>
       <style>{CSS}</style>
       <div className="screen">
-        {stage==="loading"&&<div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:4,color:C.orange}}>LOADING…</div>}
+
+        {stage==="loading"&&(
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:4,color:C.orange}}>LOADING…</div>
+        )}
 
         {stage==="phone"&&(
           <div className="box">
-            <div className="brand">URUZ</div><div className="brand-sub">Check In</div><div className="divider"/>
+            <div className="brand">URUZ</div>
+            <div className="brand-sub">Member Central — Check In</div>
+            <div className="divider"/>
             <div className="step-title">Scan & Check In</div>
-            <div className="step-sub">Enter your phone number to check in and earn points</div>
+            <div className="step-sub">Enter your phone number to check in and earn 50 points</div>
             <label className="lbl">Phone Number</label>
             <input className="inp" placeholder="+961 XX XXX XXX" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handlePhone()}/>
             {error&&<div className="err">{error}</div>}
@@ -154,8 +187,16 @@ const updated={...m,points:m.points+CHECKIN_PTS,checkins:m.checkins+1,lastChecki
 
         {stage==="pin"&&member&&(
           <div className="box">
-            <div className="brand">URUZ</div><div className="brand-sub">Check In</div><div className="divider"/>
-            <div className="member-chip"><div className="chip-av">{initials(member.name)}</div><div><div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div><div style={{fontSize:11,color:"#6B6866"}}>{member.phone}</div></div></div>
+            <div className="brand">URUZ</div>
+            <div className="brand-sub">Member Central — Check In</div>
+            <div className="divider"/>
+            <div className="member-chip">
+              <div className="chip-av">{initials(member.name)}</div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div>
+                <div style={{fontSize:11,color:"#6B6866"}}>{member.phone}</div>
+              </div>
+            </div>
             <PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Enter your PIN to check in"/>
             {error&&<div className="err">{error}</div>}
             <button className="btn btn-ghost" style={{marginTop:8}} onClick={()=>{setStage("phone");setPin("");setMember(null);}}>Back</button>
@@ -164,8 +205,16 @@ const updated={...m,points:m.points+CHECKIN_PTS,checkins:m.checkins+1,lastChecki
 
         {stage==="confirm"&&member&&(
           <div className="box">
-            <div className="brand">URUZ</div><div className="brand-sub">Check In</div><div className="divider"/>
-            <div className="member-chip"><div className="chip-av">{initials(member.name)}</div><div><div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div><div style={{fontSize:11,color:"#6B6866"}}>{member.points.toLocaleString()} pts</div></div></div>
+            <div className="brand">URUZ</div>
+            <div className="brand-sub">Member Central — Check In</div>
+            <div className="divider"/>
+            <div className="member-chip">
+              <div className="chip-av">{initials(member.name)}</div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div>
+                <div style={{fontSize:11,color:"#6B6866"}}>{member.points.toLocaleString()} pts · 🔥 {member.streak}d streak</div>
+              </div>
+            </div>
             <div className="step-sub">Tap below to check in and earn 50 points</div>
             <button className="btn btn-primary" onClick={handleCheckin} disabled={loading}>{loading?"Checking in...":"✓ Check In — +50 PTS"}</button>
             <button className="btn btn-ghost" onClick={()=>{clearSession();setStage("phone");setMember(null);}}>Not you?</button>
@@ -174,27 +223,45 @@ const updated={...m,points:m.points+CHECKIN_PTS,checkins:m.checkins+1,lastChecki
 
         {stage==="result"&&result&&(
           <div className="box" style={{textAlign:"center"}}>
-            {result.type==="success"?(
+            {result.type==="success" ? (
               <>
                 <span className="ci-icon">✅</span>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:3,color:C.muted,marginBottom:8}}>POINTS EARNED</div>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:72,color:C.orange,lineHeight:1,letterSpacing:-1}}>+{result.pts}</div>
-                <div style={{fontSize:10,letterSpacing:3,textTransform:"uppercase",color:C.muted,fontWeight:700,marginTop:4}}>Points Awarded</div>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:2,color:"#FFFDF3",margin:"16px 0 4px"}}>{member.name}</div>
-                <div style={{fontSize:13,color:C.muted,fontWeight:500}}>Total balance: <span style={{color:"#FFFDF3",fontWeight:700}}>{result.total.toLocaleString()} pts</span></div>
-                <div style={{marginTop:24,fontSize:12,color:C.muted,fontWeight:500}}>See you tomorrow! 💪</div>
+                <div style={{fontSize:10,letterSpacing:3,textTransform:"uppercase",color:C.muted,fontWeight:700,marginTop:4,marginBottom:12}}>Points Awarded</div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:2,color:"#FFFDF3"}}>{member.name}</div>
+                <div className="stats-strip">
+                  <div className="stat-cell">
+                    <div className="stat-val" style={{color:C.orange}}>{result.total.toLocaleString()}</div>
+                    <div className="stat-lbl">Total Points</div>
+                  </div>
+                  <div className="stat-cell">
+                    <div className="stat-val" style={{color:C.success}}>🔥 {result.streak}</div>
+                    <div className="stat-lbl">Day Streak</div>
+                  </div>
+                </div>
+                <div style={{marginTop:16,fontSize:12,color:C.muted,fontWeight:500}}>See you tomorrow! 💪</div>
               </>
-            ):(
+            ) : (
               <>
                 <span className="ci-icon">⏰</span>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,marginBottom:8}}>Already Checked In</div>
                 <div style={{fontSize:13,color:C.muted,fontWeight:500,lineHeight:1.6}}>You already checked in today.<br/>Come back tomorrow for more points!</div>
-                <div style={{marginTop:20,fontFamily:"'Bebas Neue',sans-serif",fontSize:36,color:C.orange}}>{member.points.toLocaleString()}</div>
-                <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:C.muted,fontWeight:700}}>Current Points</div>
+                <div className="stats-strip" style={{marginTop:20}}>
+                  <div className="stat-cell">
+                    <div className="stat-val" style={{color:C.orange}}>{member.points.toLocaleString()}</div>
+                    <div className="stat-lbl">Total Points</div>
+                  </div>
+                  <div className="stat-cell">
+                    <div className="stat-val" style={{color:C.success}}>🔥 {member.streak}</div>
+                    <div className="stat-lbl">Day Streak</div>
+                  </div>
+                </div>
               </>
             )}
           </div>
         )}
+
       </div>
     </>
   );
