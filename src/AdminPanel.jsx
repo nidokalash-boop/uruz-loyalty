@@ -13,7 +13,7 @@ import {
   getAllWorkouts, upsertWorkout, deleteWorkout,
   getAllUnlocks, unlockWorkout
 } from "./supabase";
-import { PinInput, Modal, AdminLogin, Dashboard, Members, AwardPoints, Redemptions, RewardsCatalog, StaffManagement } from "./AdminComponents1";
+import { PinInput, Modal, AdminLogin, Dashboard, Members, AwardPoints, Redemptions, RewardsCatalog, StaffManagement, BulkImport } from "./AdminComponents1";
 import { DisplaySettings, Settings, ChallengesPanel, EarnRules, ExportData, ReferralsPanel } from "./AdminComponents2";
 import { WorkoutsPanel } from "./WorkoutsPanel";
 
@@ -52,8 +52,8 @@ const ROLES = {
 };
 
 const PERMISSIONS = {
-  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","workouts","challenges","earn","referrals","export","settings"],
-  manager:    ["dashboard","members","award","redemptions","rewards","display","workouts","challenges","earn","referrals","export"],
+  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","workouts","challenges","earn","referrals","export","import","settings"],
+  manager:    ["dashboard","members","award","redemptions","rewards","display","workouts","challenges","earn","referrals","export","import"],
   front_desk: ["dashboard","members","award","redemptions"],
   trainer:    ["dashboard","members","award"],
 };
@@ -254,6 +254,7 @@ const ALL_NAV=[
   {id:"earn",       icon:"💰", label:"Earn Rules"},
   {id:"referrals",  icon:"👥", label:"Referrals"},
   {id:"export",     icon:"⬇", label:"Export Data"},
+  {id:"import",     icon:"⬆", label:"Bulk Import"},
   {id:"settings",   icon:"⚙", label:"Settings"},
 ];
 
@@ -346,6 +347,7 @@ export default function AdminPanel(){
             {page==="earn"       &&<EarnRules toast={showToast}/>}
             {page==="referrals"  &&<ReferralsPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast}/>}
             {page==="export"     &&<ExportData members={members} transactions={transactions} redemptions={redemptions} tiers={tiers} toast={showToast}/>}
+            {page==="import"     &&<BulkImport members={members} setMembers={setMembers} toast={showToast}/>}
             {page==="settings"   &&<Settings tiers={tiers} setTiers={setTiers} toast={showToast}/>}
           </div>
         </div>
