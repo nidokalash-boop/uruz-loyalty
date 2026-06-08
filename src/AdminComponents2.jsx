@@ -257,4 +257,346 @@ function ChallengesPanel({members, setMembers, setTransactions, toast, displaySe
               </div>
               <div style={{textAlign:"right"}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.orange}}>+{c.pts} PTS</div>
-                <div style={{fontSize:11,color:C.muted, display:"inline-flex", alignItems:"center", gap:4}}>{ICONS.lock(C.muted)} {c
+                <div style={{fontSize:11,color:C.muted, display:"inline-flex", alignItems:"center", gap:4}}>{ICONS.lock(C.muted)} {c.deadline}</div>
+              </div>
+            </div>
+
+            {cEnrollments.length === 0 ? (
+              <div style={{padding:"14px 18px",color:C.muted,fontSize:13}}>No members enrolled yet.</div>
+            ) : (
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead>
+                  <tr>
+                    <th style={{padding:"8px 18px",background:C.card}}>Member</th>
+                    <th style={{padding:"8px 18px",background:C.card}}>Enrolled</th>
+                    <th style={{padding:"8px 18px",background:C.card}}>Status</th>
+                    <th style={{padding:"8px 18px",background:C.card}}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cEnrollments.map(e => (
+                    <tr key={e.id} style={{borderTop:`1px solid ${C.border}`}}>
+                      <td style={{padding:"10px 18px",fontWeight:600,fontSize:13}}>{e.memberName}</td>
+                      <td style={{padding:"10px 18px",fontSize:12,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{fmtDate(e.enrolledDate)}</td>
+                      <td style={{padding:"10px 18px"}}>
+                        {e.completed ? <span className="badge badge-fulfilled">Completed</span> : <span className="badge badge-pending">In Progress</span>}
+                      </td>
+                      <td style={{padding:"10px 18px"}}>
+                        {!e.completed && (
+                          <button className="btn btn-success btn-sm" onClick={() => handleComplete(e)}>Mark Complete</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const DEF_EARN_RULES = [
+  { id:"ER-001", action:"Daily Check-in",            pts:"50",   note:"Scan QR at entrance",   active:true, sort_order:0 },
+  { id:"ER-002", action:"Group Class Attendance",   pts:"75",   note:"Per class",             active:true, sort_order:1 },
+  { id:"ER-003", action:"Personal Training Session",  pts:"100",  note:"Per session",           active:true, sort_order:2 },
+  { id:"ER-004", action:"Refer a Friend",             pts:"500",  note:"When they join",        active:true, sort_order:3 },
+  { id:"ER-005", action:"In-Gym Purchase",            pts:"3%",   note:"Of spend",              active:true, sort_order:4 },
+  { id:"ER-006", action:"7-Day Streak Bonus",         pts:"100",  note:"Auto-awarded",          active:true, sort_order:5 },
+  { id:"ER-007", action:"30-Day Streak Bonus",        pts:"400",  note:"Auto-awarded",          active:true, sort_order:6 },
+  { id:"ER-008", action:"Birthday Bonus",             pts:"300",  note:"Once a year",           active:true, sort_order:7 },
+];
+
+function EarnRules({ toast }) {
+  const [rules, setRules]     = useState([]);
+  const [loaded, setLoaded]   = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm]       = useState({ action:"", pts:"", note:"", active:true });
+  const [saving, setSaving]   = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const data = await getEarnRules();
+      if (data.length === 0) {
+        for (const rule of DEF_EARN_RULES) { await upsertEarnRule(rule); }
+        setRules(DEF_EARN_RULES);
+      } else { setRules(data); }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const handleAdd = async () => {
+    if (!form.action || !form.pts) return;
+    setSaving(true);
+    const nr = { ...form, id: genId("ER"), sort_order: rules.length };
+    await upsertEarnRule(nr);
+    setRules(prev => [...prev, nr]);
+    setShowAdd(false);
+    setForm({ action:"", pts:"", note:"", active:true });
+    setSaving(false);
+    toast("Earn rule added");
+  };
+
+  const saveEdit = async () => {
+    setSaving(true);
+    await upsertEarnRule(editing);
+    setRules(prev => prev.map(r => r.id === editing.id ? editing : r));
+    setEditing(null);
+    setSaving(false);
+    toast("Earn rule updated");
+  };
+
+  const del = async (id) => {
+    await deleteEarnRule(id);
+    setRules(prev => prev.filter(r => r.id !== id));
+    toast("Earn rule removed");
+  };
+
+  if (!loaded) return <div style={{color:C.muted,padding:20}}>Loading…</div>;
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div className="sec-title">Earning Metric Paths ({rules.filter(r=>r.active).length} Active)</div>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Add Rule</button>
+      </div>
+      <div style={{fontSize:12,color:C.muted,marginBottom:16,fontWeight:500}}>
+        These show in the member portal under the Earn tab. Toggle off to hide without deleting.
+      </div>
+
+      <div className="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Indicator</th><th>Action Matrix Description</th><th>Points Assigned</th><th>Operational Note</th><th>Active State</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            {rules.map(r => (
+              <tr key={r.id} style={{opacity:r.active?1:0.5}}>
+                <td style={{textAlign:"center",width:50}}>{ICONS.earn(r.active ? C.orange : C.muted)}</td>
+                <td style={{fontWeight:600}}>{r.action}</td>
+                <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.orange}}>{r.pts}</td>
+                <td style={{color:C.muted,fontSize:12}}>{r.note}</td>
+                <td>
+                  <div className={`toggle${r.active?" on":""}`} onClick={async() => {
+                    const up = { ...r, active: !r.active };
+                    await upsertEarnRule(up);
+                    setRules(prev => prev.map(x => x.id === r.id ? up : x));
+                  }}/>
+                </td>
+                <td>
+                  <div style={{display:"flex",gap:6}}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditing({...r})}>Edit</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => del(r.id)}>✕</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <Modal title="Edit Earn Rule" onClose={() => setEditing(null)} footer={<>
+          <button className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
+          <button className="btn btn-primary" onClick={saveEdit} disabled={saving}>{saving?"Saving...":"Save"}</button>
+        </>}>
+          <div className="form-row"><label className="form-label">Action Name</label><input className="form-input" value={editing.action} onChange={e=>setEditing({...editing,action:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Points (number or % )</label><input className="form-input" value={editing.pts} onChange={e=>setEditing({...editing,pts:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Note</label><input className="form-input" value={editing.note} onChange={e=>setEditing({...editing,note:e.target.value})}/></div>
+          <div className="form-row">
+            <label className="form-label">Active</label>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div className={`toggle${editing.active?" on":""}`} onClick={()=>setEditing({...editing,active:!editing.active})}/>
+              <span style={{fontSize:13,color:editing.active?C.success:C.muted}}>{editing.active?"Visible to members":"Hidden"}</span>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showAdd && (
+        <Modal title="Add Earn Rule" onClose={() => setShowAdd(false)} footer={<>
+          <button className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleAdd} disabled={saving}>{saving?"Saving...":"Add Rule"}</button>
+        </>}>
+          <div className="form-row"><label className="form-label">Action Name *</label><input className="form-input" placeholder="e.g. Attend Yoga Class" value={form.action} onChange={e=>setForm({...form,action:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Points * (number or %)</label><input className="form-input" placeholder="e.g. 75 or 5%" value={form.pts} onChange={e=>setForm({...form,pts:e.target.value})}/></div>
+          <div className="form-row"><label className="form-label">Note</label><input className="form-input" placeholder="e.g. Per class" value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function ReferralsPanel({ members, setMembers, setTransactions, toast }) {
+  const [referrals, setReferrals] = useState([]);
+  const [loaded, setLoaded]       = useState(false);
+  const [showAdd, setShowAdd]     = useState(false);
+  const [form, setForm]           = useState({ referrerId:"", newMemberId:"" });
+  const [saving, setSaving]       = useState(false);
+
+  useEffect(() => { getReferrals().then(data => { setReferrals(data); setLoaded(true); }); }, []);
+
+  const handleAdd = async () => {
+    const referrer = members.find(m => m.id === form.referrerId);
+    const newMember = members.find(m => m.id === form.newMemberId);
+    if (!referrer || !newMember) return;
+    setSaving(true);
+    const REF_PTS = 500;
+    const ref = { id: genId("REF"), referrerId: referrer.id, referrerName: referrer.name, referrerCode: referrer.referral_code || "", newMemberId: newMember.id, newMemberName: newMember.name, pts: REF_PTS, date: today() };
+    await addReferral(ref);
+    const newPoints = referrer.points + REF_PTS;
+    await upsertMember({...referrer, points: newPoints});
+    setMembers(prev => prev.map(m => m.id===referrer.id ? {...m,points:newPoints} : m));
+    const txn = { id:genId("TXN"), memberId:referrer.id, memberName:referrer.name, type:"referral", pts:REF_PTS, note:`Referral — ${newMember.name}`, date:today() };
+    await addTransaction(txn);
+    setTransactions(prev => [txn,...prev]);
+    setReferrals(prev => [ref,...prev]);
+    setShowAdd(false); setForm({ referrerId:"", newMemberId:"" }); setSaving(false);
+    toast(`Referral logged — +${REF_PTS} pts awarded to ${referrer.name}`);
+  };
+
+  if (!loaded) return <div style={{color:C.muted,padding:20}}>Loading…</div>;
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div className="sec-title">Network Onboarding Referrals ({referrals.length})</div>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Log Referral</button>
+      </div>
+      <div style={{fontSize:12,color:C.muted,marginBottom:16,fontWeight:500}}>
+        Members earn 500 pts for each successful referral. Referrals are auto-logged when new members use a referral code. You can also log them manually here.
+      </div>
+
+      {referrals.length === 0 ? <div className="empty">No referrals yet.</div> : (
+        <div className="tbl-wrap">
+          <table>
+            <thead><tr><th>Referred By</th><th>New Member</th><th>Network Token Code</th><th>Points Added</th><th>Synchronization Date</th></tr></thead>
+            <tbody>
+              {referrals.map(r => (
+                <tr key={r.id}>
+                  <td style={{fontWeight:600}}>{r.referrerName}</td>
+                  <td>{r.newMemberName}</td>
+                  <td className="mono" style={{color:C.orange}}>{r.referrerCode||"—"}</td>
+                  <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.success}}>+{r.pts}</td>
+                  <td className="mono" style={{color:C.muted}}>{fmtDate(r.date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div style={{marginTop:24}}>
+        <div className="sec-title" style={{marginBottom:14}}>System Ambassador Registers</div>
+        <div className="tbl-wrap">
+          <table>
+            <thead><tr><th>Member</th><th>Active Network Token</th><th>Total Validated Onboardings</th></tr></thead>
+            <tbody>
+              {[...members].filter(m=>m.status==="active").sort((a,b)=>a.name.localeCompare(b.name)).map(m => {
+                const count = referrals.filter(r => r.referrerId === m.id).length;
+                return (
+                  <tr key={m.id}>
+                    <td style={{fontWeight:600}}>{m.name}</td>
+                    <td className="mono" style={{color:C.orange,fontWeight:700}}>{m.referral_code||"—"}</td>
+                    <td><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:count>0?C.success:C.muted}}>{count}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showAdd && (
+        <Modal title="Log Manual Referral Link Event" onClose={() => setShowAdd(false)} footer={<>
+          <button className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleAdd} disabled={saving||!form.referrerId||!form.newMemberId}>
+            {saving?"Saving...":"Log Referral Data Link"}
+          </button>
+        </>}>
+          <div className="form-row">
+            <label className="form-label">Referring Athlete Account *</label>
+            <select className="form-select" value={form.referrerId} onChange={e=>setForm({...form,referrerId:e.target.value})}>
+              <option value="">— select member node —</option>
+              {[...members].sort((a,b)=>a.name.localeCompare(b.name)).map(m=>(<option key={m.id} value={m.id}>{m.name}</option>))}
+            </select>
+          </div>
+          <div className="form-row">
+            <label className="form-label">Onboarded Core Node *</label>
+            <select className="form-select" value={form.newMemberId} onChange={e=>setForm({...form,newMemberId:e.target.value})}>
+              <option value="">— select target node —</option>
+              {[...members].filter(m=>m.id!==form.referrerId).sort((a,b)=>a.name.localeCompare(b.name)).map(m=>(<option key={m.id} value={m.id}>{m.name}</option>))}
+            </select>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function ExportData({ members, transactions, redemptions, tiers, toast }) {
+  const [exporting, setExporting] = useState(null);
+  const toCSV = (headers, rows) => {
+    const escape = v => { const s = String(v === null || v === undefined ? "" : v); return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g,'""')}"` : s; };
+    return [headers.join(","), ...rows.map(r => r.map(escape).join(","))].join("\n");
+  };
+
+  const download = (filename, csv) => {
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+  };
+
+  const getTierName = (pts) => {
+    const sorted = [...tiers].sort((a,b)=>b.min-a.min);
+    return (sorted.find(t=>pts>=t.min)||tiers[0])?.name || "Iron";
+  };
+
+  const exports = [
+    { id: "members", label: "Members Database", icon: ICONS.export(C.orange), desc: "All user records — scores, milestones, status tracking matrix", fn: async () => {
+        const headers = ["ID","Name","Phone","Email","Join Date","Points","Tier","Checkins","Streak","Status"];
+        const rows = [...members].sort((a,b)=>b.points-a.points).map(m => [m.id, m.name, m.phone, m.email||"", m.joinDate||"", m.points, getTierName(m.points), m.checkins, m.streak, m.status]);
+        download(`URUZ_Members_${today()}.csv`, toCSV(headers, rows));
+      }},
+    { id: "leaderboard", label: "Global Standings", icon: ICONS.export(C.gold), desc: "Active members indexed by point volume tracking architecture", fn: async () => {
+        const headers = ["Rank","Name","Phone","Points","Tier","Streak","Check-ins","Status"];
+        const sorted = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points);
+        const rows = sorted.map((m,i) => [i+1, m.name, m.phone, m.points, getTierName(m.points), m.streak, m.checkins, m.status]);
+        download(`URUZ_Leaderboard_${today()}.csv`, toCSV(headers, rows));
+      }},
+    { id: "transactions", label: "Transaction Master Registers", icon: ICONS.export(C.cerulean), desc: "Full numeric log files — absolute verification track records", fn: async () => {
+        const headers = ["ID","Member","Type","Points","Note","Date"];
+        const rows = transactions.map(t => [t.id, t.memberName||"", t.type, t.pts, t.note||"", t.date||""]);
+        download(`URUZ_Transactions_${today()}.csv`, toCSV(headers, rows));
+      }}
+  ];
+
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div className="sec-title">System Export Interface Terminal</div>
+        <div style={{fontSize:12,color:C.muted,fontWeight:500}}>Downloads as encrypted clean CSV files</div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+        {exports.map(exp => (
+          <div key={exp.id} className="interactive-card" style={{margin:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+              {exp.icon}
+              <div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:1,color:C.white}}>{exp.label}</div>
+                <div style={{fontSize:11,color:C.muted,marginTop:2}}>{exp.desc}</div>
+              </div>
+            </div>
+            <button className="btn btn-primary" style={{width:"100%"}} onClick={async()=>{setExporting(exp.id); try{await exp.fn(); toast("Export successful");}catch{toast("System Error");} setExporting(null);}} disabled={exporting === exp.id}>
+              {exporting === exp.id ? "Processing..." : "Compile Data Array"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export { DisplaySettings, Settings, ChallengesPanel, EarnRules, ExportData, ReferralsPanel };
