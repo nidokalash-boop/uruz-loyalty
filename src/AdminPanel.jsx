@@ -301,7 +301,7 @@ function AdminLogin({ onLogin, staffList }) {
       <div className="login-wrap">
         <div className="login-box">
           <div className="login-brand">URUZ</div>
-          <div className="login-sub">Admin Panel</div>
+          <div className="login-sub">Member Central — Admin</div>
           <div className="login-divider"/>
 
           {stage === "setup" && (
@@ -1358,7 +1358,7 @@ export default function AdminPanel(){
       <style>{CSS}</style>
       <div className="admin">
         <div className="sidebar">
-          <div className="sb-brand"><div className="sb-logo">URUZ</div><div className="sb-sub">Admin Panel</div></div>
+          <div className="sb-brand"><div className="sb-logo">URUZ</div><div className="sb-sub">Member Central</div></div>
           <div className="sb-nav">
             <div className="sb-section">Navigation</div>
             {visibleNav.map(n=>(<button key={n.id} className={`sb-btn${page===n.id?" on":""}`} onClick={()=>setPage(n.id)}><span className="sb-icon">{n.icon}</span>{n.label}{n.id==="redemptions"&&pending>0&&<span style={{marginLeft:"auto",background:C.danger,color:"#fff",fontSize:10,fontWeight:800,padding:"1px 6px"}}>{pending}</span>}</button>))}
