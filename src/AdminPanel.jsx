@@ -254,7 +254,7 @@ const ALL_NAV=[
   {id:"earn",       icon:"💰", label:"Earn Rules"},
   {id:"referrals",  icon:"👥", label:"Referrals"},
   {id:"export",     icon:"⬇", label:"Export Data"},
-  {id:"import",     icon:"⬆", label:"Bulk Import"},
+  {id:"import",     icon:"↑", label:"Bulk Import"},
   {id:"settings",   icon:"⚙", label:"Settings"},
 ];
 
