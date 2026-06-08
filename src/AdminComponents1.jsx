@@ -587,4 +587,256 @@ function StaffManagement({staffList,setStaffList,toast}){
 }
 
 
-export { PinInput, Modal, AdminLogin, Dashboard, Members, AwardPoints, Redemptions, RewardsCatalog, StaffManagement };
+
+// ── BULK IMPORT ───────────────────────────────────────────
+function BulkImport({ members, setMembers, toast }) {
+  const [tab, setTab]             = useState("members");
+  const [stage, setStage]         = useState("upload"); // upload | preview | done
+  const [rows, setRows]           = useState([]);
+  const [errors, setErrors]       = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported]   = useState(0);
+
+  const MEMBER_TEMPLATE = "Name,Phone,Email,Birthday
+Alex Rivera,+961 70 123 456,alex@email.com,1995-06-15
+Sara K.,+961 71 234 567,,1990-03-22";
+  const WORKOUT_TEMPLATE = "Title,Category,Difficulty,Duration,AccessType,PointsCost,PriceLabel,TierRequired,VideoURL,Description
+Full Body Burn,Strength,Beginner,45,free,,,,,Great full body workout for all levels";
+
+  const downloadTemplate = (type) => {
+    const csv = type === "members" ? MEMBER_TEMPLATE : WORKOUT_TEMPLATE;
+    const blob = new Blob([csv], { type:"text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `URUZ_${type}_template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const parseCSV = (text) => {
+    const lines = text.trim().split(/
+?
+/);
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g,"_"));
+    return lines.slice(1).filter(l=>l.trim()).map(line => {
+      const vals = line.split(",").map(v => v.trim());
+      const obj = {};
+      headers.forEach((h,i) => obj[h] = vals[i]||"");
+      return obj;
+    });
+  };
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = parseCSV(ev.target.result);
+        const errs = [];
+        if (tab === "members") {
+          parsed.forEach((r,i) => {
+            if (!r.name) errs.push(`Row ${i+2}: Missing name`);
+            if (!r.phone) errs.push(`Row ${i+2}: Missing phone`);
+          });
+        } else {
+          parsed.forEach((r,i) => {
+            if (!r.title) errs.push(`Row ${i+2}: Missing title`);
+          });
+        }
+        setErrors(errs);
+        setRows(parsed);
+        setStage("preview");
+      } catch(err) {
+        toast("Could not parse CSV — check the file format");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportMembers = async () => {
+    setImporting(true);
+    let count = 0;
+    const existingPhones = new Set(members.map(m => m.phone.replace(/\s+/g,"")));
+    for (const row of rows) {
+      const phone = (row.phone||"").replace(/\s+/g,"");
+      if (existingPhones.has(phone)) continue; // skip duplicates
+      const refCode = "URUZ-" + Math.random().toString(36).slice(2,7).toUpperCase();
+      const nm = {
+        id:            genId("URZ"),
+        name:          row.name||"",
+        phone:         row.phone||"",
+        email:         row.email||"",
+        joinDate:      today(),
+        points:        0,
+        checkins:      0,
+        streak:        0,
+        status:        "active",
+        pin:           null,
+        lastCheckin:   null,
+        birthday:      row.birthday||null,
+        referral_code: refCode,
+      };
+      await upsertMember(nm);
+      setMembers(prev => [...prev, normalizeMember(nm)]);
+      existingPhones.add(phone);
+      count++;
+    }
+    setImported(count);
+    setImporting(false);
+    setStage("done");
+    toast(`${count} members imported successfully`);
+  };
+
+  const handleImportWorkouts = async () => {
+    setImporting(true);
+    let count = 0;
+    for (const row of rows) {
+      if (!row.title) continue;
+      const workout = {
+        id:            genId("WRK"),
+        title:         row.title||"",
+        description:   row.description||"",
+        category:      row.category||"Strength",
+        difficulty:    row.difficulty||"Beginner",
+        duration_mins: Number(row.duration)||30,
+        access_type:   row.accesstype||row.access_type||"free",
+        points_cost:   Number(row.pointscost||row.points_cost)||0,
+        price_label:   row.pricelabel||row.price_label||"",
+        tier_required: row.tierrequired||row.tier_required||null,
+        video_url:     row.videourl||row.video_url||"",
+        pdf_url:       row.pdfurl||row.pdf_url||"",
+        thumbnail_url: row.thumbnailurl||row.thumbnail_url||"",
+        exercises:     [],
+        active:        true,
+        created_at:    today(),
+      };
+      await upsertWorkout(workout);
+      count++;
+    }
+    setImported(count);
+    setImporting(false);
+    setStage("done");
+    toast(`${count} workouts imported successfully`);
+  };
+
+  const reset = () => { setStage("upload"); setRows([]); setErrors([]); setImported(0); };
+
+  return (
+    <div>
+      <div className="sec-hdr">
+        <div className="sec-title">Bulk Import</div>
+      </div>
+
+      {/* Tabs */}
+      <div className="tabs">
+        {["members","workouts"].map(t=>(
+          <button key={t} className={`tab-btn${tab===t?" on":""}`} onClick={()=>{setTab(t);reset();}}>
+            {t==="members"?"👥 Members":"💪 Workouts"}
+          </button>
+        ))}
+      </div>
+
+      {/* UPLOAD STAGE */}
+      {stage==="upload" && (
+        <div>
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,padding:20,marginBottom:16}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:2,color:C.white,marginBottom:8}}>Step 1 — Download Template</div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:14,lineHeight:1.6}}>
+              Download the CSV template, fill it in Excel or Google Sheets, then upload it back here.
+              {tab==="members" && " Duplicate phone numbers will be skipped automatically."}
+            </div>
+            <button className="btn btn-ghost" onClick={()=>downloadTemplate(tab)}>⬇ Download {tab==="members"?"Members":"Workouts"} Template</button>
+          </div>
+
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,padding:20}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:2,color:C.white,marginBottom:8}}>Step 2 — Upload Your CSV</div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:14}}>Select your filled CSV file to preview before importing.</div>
+            <label style={{
+              display:"flex",alignItems:"center",justifyContent:"center",
+              gap:10,padding:"24px",border:`2px dashed ${C.border}`,
+              cursor:"pointer",transition:"border-color .2s",
+              fontFamily:"'Montserrat',sans-serif",fontSize:12,
+              fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:C.muted,
+            }}
+            onMouseEnter={e=>e.currentTarget.style.borderColor=C.orange}
+            onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+              <span style={{fontSize:24}}>📂</span>
+              Choose CSV File
+              <input type="file" accept=".csv" onChange={handleFile} style={{display:"none"}}/>
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW STAGE */}
+      {stage==="preview" && (
+        <div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div style={{fontSize:13,color:C.muted}}>{rows.length} rows found · {errors.length} errors</div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-ghost" onClick={reset}>← Back</button>
+              <button className="btn btn-primary" onClick={tab==="members"?handleImportMembers:handleImportWorkouts} disabled={importing||errors.length>0}>
+                {importing?`Importing...`:`Import ${rows.length} ${tab}`}
+              </button>
+            </div>
+          </div>
+
+          {errors.length > 0 && (
+            <div style={{background:"rgba(239,68,68,.1)",border:`1px solid ${C.danger}`,padding:14,marginBottom:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.danger,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>⚠ Fix these errors before importing</div>
+              {errors.map((e,i)=><div key={i} style={{fontSize:12,color:C.danger,marginBottom:4}}>• {e}</div>)}
+            </div>
+          )}
+
+          <div className="tbl-wrap">
+            {tab==="members" && (
+              <table>
+                <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Birthday</th><th>Status</th></tr></thead>
+                <tbody>{rows.map((r,i)=>{
+                  const isDupe = members.some(m=>m.phone.replace(/\s+/g,"") === (r.phone||"").replace(/\s+/g,""));
+                  return(<tr key={i} style={{opacity:isDupe?0.4:1}}>
+                    <td style={{color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{i+1}</td>
+                    <td style={{fontWeight:600}}>{r.name||<span style={{color:C.danger}}>Missing</span>}</td>
+                    <td className="mono">{r.phone||<span style={{color:C.danger}}>Missing</span>}</td>
+                    <td style={{color:C.muted}}>{r.email||"—"}</td>
+                    <td style={{color:C.muted}}>{r.birthday||"—"}</td>
+                    <td>{isDupe?<span className="badge badge-inactive">Duplicate</span>:<span className="badge badge-active">New</span>}</td>
+                  </tr>);
+                })}</tbody>
+              </table>
+            )}
+            {tab==="workouts" && (
+              <table>
+                <thead><tr><th>#</th><th>Title</th><th>Category</th><th>Difficulty</th><th>Access</th><th>Duration</th></tr></thead>
+                <tbody>{rows.map((r,i)=>(
+                  <tr key={i}>
+                    <td style={{color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{i+1}</td>
+                    <td style={{fontWeight:600}}>{r.title||<span style={{color:C.danger}}>Missing</span>}</td>
+                    <td style={{color:C.muted}}>{r.category||"Strength"}</td>
+                    <td style={{color:C.muted}}>{r.difficulty||"Beginner"}</td>
+                    <td><span className="badge" style={{background:"rgba(245,128,32,.15)",color:C.orange}}>{r.accesstype||r.access_type||"free"}</span></td>
+                    <td style={{color:C.muted}}>{r.duration||30}m</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DONE STAGE */}
+      {stage==="done" && (
+        <div style={{textAlign:"center",padding:"48px 20px"}}>
+          <div style={{fontSize:56,marginBottom:16}}>✅</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,letterSpacing:2,color:C.white,marginBottom:8}}>Import Complete</div>
+          <div style={{fontSize:14,color:C.muted,marginBottom:24}}>{imported} {tab} imported successfully</div>
+          <button className="btn btn-primary" style={{width:"auto",padding:"10px 28px"}} onClick={reset}>Import More</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export { PinInput, Modal, AdminLogin, Dashboard, Members, AwardPoints, Redemptions, RewardsCatalog, StaffManagement, BulkImport };
