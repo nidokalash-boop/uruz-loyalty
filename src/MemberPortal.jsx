@@ -453,6 +453,81 @@ function PinInput({ value, onChange, label }) {
   );
 }
 
+
+// ── INSTALL PROMPT (iOS + Android) ───────────────────────
+function InstallPrompt() {
+  const [show, setShow]           = useState(false);
+  const [platform, setPlatform]   = useState(null);
+  const [deferredPrompt, setDP]   = useState(null);
+
+  useEffect(() => {
+    const isIOS        = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isAndroid    = /android/i.test(navigator.userAgent);
+    const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+    const dismissed    = localStorage.getItem("uruz:install-dismissed");
+    if (isStandalone || dismissed) return;
+
+    // Android: capture the beforeinstallprompt event
+    const handler = e => { e.preventDefault(); setDP(e); setPlatform("android"); setTimeout(()=>setShow(true), 2000); };
+    window.addEventListener("beforeinstallprompt", handler);
+
+    // iOS: show manual instructions
+    if (isIOS) { setPlatform("ios"); setTimeout(()=>setShow(true), 2000); }
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const dismiss = () => { localStorage.setItem("uruz:install-dismissed","1"); setShow(false); };
+
+  const handleAndroidInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") dismiss();
+    else dismiss();
+  };
+
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position:"fixed",top:0,left:0,right:0,
+      background:"linear-gradient(135deg,#1a1208,#252627)",
+      border:"1px solid rgba(245,128,32,.4)",
+      borderTop:"none",
+      padding:"12px 16px",
+      zIndex:1000,
+      display:"flex",alignItems:"flex-start",gap:12,
+      animation:"slidedown .4s cubic-bezier(0.16,1,0.3,1)",
+      boxShadow:"0 4px 20px rgba(0,0,0,0.5)",
+    }}>
+      <style>{`@keyframes slidedown{from{transform:translateY(-100%);opacity:0;}to{transform:translateY(0);opacity:1;}}`}</style>
+      <img src={LOGO_URL} alt="URUZ" style={{height:32,width:"auto",flexShrink:0,marginTop:2}}/>
+      <div style={{flex:1}}>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:1.5,color:"#F58020",marginBottom:3}}>Add to Home Screen</div>
+        {platform==="ios" && (
+          <div style={{fontSize:11,color:"#A8A9AD",lineHeight:1.6}}>
+            Tap <span style={{color:"#FFFDF3",fontWeight:700}}>Share ⎙</span> then <span style={{color:"#FFFDF3",fontWeight:700}}>"Add to Home Screen"</span> for the best experience
+          </div>
+        )}
+        {platform==="android" && (
+          <div style={{fontSize:11,color:"#A8A9AD",lineHeight:1.6,marginBottom:8}}>
+            Install Member Central for quick access — no App Store needed
+          </div>
+        )}
+        {platform==="android" && (
+          <button onClick={handleAndroidInstall} style={{
+            background:"#F58020",border:"none",color:"#fff",
+            padding:"6px 14px",fontFamily:"'Montserrat',sans-serif",
+            fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer",
+          }}>Install App</button>
+        )}
+      </div>
+      <button onClick={dismiss} style={{background:"none",border:"none",color:"#6B6866",fontSize:18,cursor:"pointer",padding:"0 4px",flexShrink:0,lineHeight:1}}>✕</button>
+    </div>
+  );
+}
+
 // ── LOGIN FLOW ────────────────────────────────────────────
 function LoginFlow({ onLogin }) {
   const [stage,setStage]           = useState("phone");
@@ -536,6 +611,7 @@ function LoginFlow({ onLogin }) {
   return (
     <>
       <style>{CSS}</style>
+      <InstallPrompt/>
       <div className="screen">
         {stage==="phone"&&(<div className="box"><LogoBox/><div className="divider"/><div className="step-title">Welcome Back</div><label className="lbl">Your Phone Number</label><input className="inp" placeholder="+961 XX XXX XXX" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handlePhone()}/>{error&&<div className="err">{error}</div>}<button className="btn btn-primary" onClick={handlePhone} disabled={loading}>{loading?"Checking...":"Sign In"}</button><div className="hint">Not a member? <span className="link" onClick={()=>{setError("");setStage("register");}}>Register here</span></div></div>)}
         {stage==="pin"&&member&&(<div className="box"><LogoBox/><div className="divider"/><div className="member-chip"><div className="chip-av">{initials(member.name)}</div><div><div style={{fontSize:14,fontWeight:700,color:"#FFFDF3"}}>{member.name}</div><div style={{fontSize:11,color:"#6B6866"}}>{member.phone}</div></div></div><PinInput value={pin} onChange={v=>{setPin(v);setError("");}} label="Enter your 4-digit PIN"/>{error&&<div className="err">{error}</div>}<button className="btn btn-ghost" style={{marginTop:8}} onClick={()=>{setStage("phone");setPin("");setMember(null);}}>Back</button></div>)}
@@ -1297,6 +1373,32 @@ export default function MemberCentral() {
     if(session?.memberId){setMemberId(session.memberId);loadData(session.memberId);}
   },[]);
 
+  // Handle Android back button — navigate between tabs instead of exiting
+  useEffect(()=>{
+    const handlePop = () => {
+      setTab(prev => {
+        // If on home, push a new state so back doesn't exit
+        if (prev === "home") {
+          window.history.pushState(null, "", window.location.href);
+          return prev;
+        }
+        // Otherwise go back to home
+        return "home";
+      });
+    };
+    // Push initial state so we have something to pop
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, [memberId]);
+
+  // Push new history state when tab changes so back button works per tab
+  useEffect(()=>{
+    if (memberId) {
+      window.history.pushState({ tab }, "", window.location.href);
+    }
+  }, [tab]);
+
   const handleLogin=(id)=>{setMemberId(id);loadData(id);};
   const handleLogout=()=>{clearSession();setMemberId(null);setMember(null);setLoaded(false);};
   const handleRequest=async(reward)=>{
@@ -1333,6 +1435,7 @@ export default function MemberCentral() {
 
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
         {tierCelebration && <TierCelebration tier={tierCelebration} onDismiss={()=>setTierCelebration(null)}/>}
+        <InstallPrompt/>
       </div>
     </>
   );
