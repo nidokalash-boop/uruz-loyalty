@@ -17,7 +17,6 @@ const C = {
 function genId(p) { return `${p}-${Math.floor(10000+Math.random()*90000)}`; }
 function today() { return new Date().toISOString().slice(0,10); }
 function fmtDate(d) { try { return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}); } catch { return d||""; } }
-function initials(n) { return (n||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
 
 function Modal({title,onClose,children,footer}){
   return(<div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal"><div className="modal-hdr"><div className="modal-title">{title}</div><button className="modal-close" onClick={onClose}>✕</button></div><div className="modal-body">{children}</div>{footer&&<div className="modal-footer">{footer}</div>}</div></div>);
@@ -28,11 +27,11 @@ const DEF_DISPLAY = {
   slideOrder: ["leaderboard","challenges","activity","spotlight"],
   slideDuration: 12,
   ticker: ["Train your strength — every visit earns points"],
-  challenges: [{ id:1, name:"Weekly Warrior", desc:"Check in 5× this week", pts:150, deadline:"3 days", active:true, goal:1 }],
+  challenges: [{ id:1, name:"Weekly Warrior", desc:"Check in 5× this week", pts:150, deadline:"3 days", active:true, goal:5 }],
   homeMessages: ["Every rep is a deposit into your future self."]
 };
 
-function DisplaySettings({toast}){
+export function DisplaySettings({toast}){
   const [settings,setSettings]=useState(DEF_DISPLAY);
   const [saving,setSaving]=useState(false);
   const [loaded,setLoaded]=useState(false);
@@ -44,17 +43,19 @@ function DisplaySettings({toast}){
     });
   },[]);
 
+  const toggleSlide=(key)=>setSettings(s=>({...s,slides:{...s.slides,[key]:!s.slides[key]}}));
+
   if(!loaded) return <div style={{color:C.muted,padding:20}}>Loading…</div>;
   return(<div>
     <div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}>
-      <button className="btn btn-primary" onClick={async()=>{setSaving(true); await saveDisplaySettings({config:JSON.stringify(settings)}); setSaving(false); toast("Display Configuration Saved");}} disabled={saving}>Save All Settings</button>
+      <button className="btn btn-primary" onClick={async()=>{setSaving(true); await saveDisplaySettings({config:JSON.stringify(settings)}); setSaving(false); toast("Display Settings Configured");}} disabled={saving}>Save All Settings</button>
     </div>
     <div className="display-section">
-      <div className="display-section-title">Slide Rotation Control</div>
+      <div className="display-section-title">Slide Rotation Engine</div>
       <input type="range" min="5" max="30" value={settings.slideDuration} onChange={e=>setSettings(s=>({...s,slideDuration:Number(e.target.value)}))} style={{width:"100%",marginBottom:16,accentColor:C.orange}}/>
       {["leaderboard","challenges","activity","spotlight"].map(k=>(
         <div key={k} className="slide-row">
-          <div className={`toggle${settings.slides[k]?" on":""}`} onClick={()=>setSettings(s=>({...s,slides:{...s.slides,[k]:!s.slides[k]}}))}/>
+          <div className={`toggle${settings.slides[k]?" on":""}`} onClick={()=>toggleSlide(k)}/>
           <span style={{fontSize:14,fontWeight:500,color:settings.slides[k]?C.white:C.muted, display:"inline-flex", alignItems:"center", gap:6}}>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/></svg>
             {k.toUpperCase()}
@@ -65,70 +66,75 @@ function DisplaySettings({toast}){
   </div>);
 }
 
-function Settings({tiers,setTiers,toast}){
+export function Settings({tiers,setTiers,toast}){
   const [local,setLocal]=useState(tiers.map(t=>({...t})));
   const [saving,setSaving]=useState(false);
   return(<div style={{maxWidth:600}}>
-    <div className="sec-hdr"><div className="sec-title">Tier Configuration Panel</div><button className="btn btn-primary" onClick={async()=>{setSaving(true); for(const t of local) await upsertTier(t); setTiers(local); setSaving(false); toast("Tiers Synchronized");}} disabled={saving}>Save Tiers</button></div>
+    <div className="sec-hdr"><div className="sec-title">Tier Configuration Panel</div><button className="btn btn-primary" onClick={async()=>{setSaving(true); for(const t of local) await upsertTier(t); setTiers(local); setSaving(false); toast("Tiers Saved");}} disabled={saving}>Save Tiers</button></div>
     <div className="tbl-wrap" style={{marginTop:16}}><table><thead><tr><th>#</th><th>Name</th><th>Min Points</th></tr></thead><tbody>{local.map((t,i)=>(<tr key={t.id}><td>{i+1}</td><td><input className="form-input" value={t.name} onChange={e=>setLocal(prev=>prev.map(x=>x.id===t.id?{...x,name:e.target.value}:x))}/></td><td><input className="form-input" type="number" value={t.min} onChange={e=>setLocal(prev=>prev.map(x=>x.id===t.id?{...x,min:Number(e.target.value)}:x))} disabled={i===0}/></td></tr>))}</tbody></table></div>
   </div>);
 }
 
-function ChallengesPanel({members, setMembers, setTransactions, toast, displaySettings}) {
+export function ChallengesPanel({members, setMembers, setTransactions, toast, displaySettings}) {
   const [enrollments, setEnrollments] = useState([]);
   useEffect(() => { getEnrollments().then(setEnrollments); }, []);
   const challenges = displaySettings?.challenges ? displaySettings.challenges.filter(c => c.active !== false) : [];
 
   return (
     <div>
-      <div className="sec-hdr"><div className="sec-title">Challenges Track logs</div></div>
-      {challenges.map(c => (
-        <div key={c.id} style={{background:C.surface, border:`1px solid ${C.border}`, padding:16, marginBottom:12, borderRadius:8}}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-            <div>
-              <div style={{fontWeight:700, color:C.white}}>{c.name}</div>
-              <div style={{fontSize:12, color:C.muted}}>{c.desc}</div>
-            </div>
-            <button className="btn btn-success btn-sm" onClick={async()=>{
-              const activeEnr = enrollments.find(e => e.challengeId === String(c.id) && !e.completed);
-              if(!activeEnr) return;
-              await completeEnrollment(activeEnr.id, today());
-              toast("Challenge Verified");
-            }}>Verify System Metrics</button>
+      <div className="sec-hdr"><div className="sec-title">Challenges Operations Registry</div></div>
+      {challenges.length === 0 ? <div className="empty">No active challenge targets mapping logs.</div> : challenges.map(c => {
+        const cEnrollments = enrollments.filter(e => e.challengeId === String(c.id));
+        return (
+          <div key={c.id} style={{background:C.card, border:`1px solid ${C.border}`, padding:16, marginBottom:12, borderRadius:8}}>
+            <div style={{fontWeight:700, color:C.white}}>{c.name}</div>
+            <div style={{fontSize:12, color:C.muted, marginBottom:12}}>{c.desc} · +{c.pts} PTS</div>
+            <table style={{width:"100%"}}>
+              <tbody>
+                {cEnrollments.map(e => (
+                  <tr key={e.id} style={{borderTop:`1px solid ${C.border}`}}>
+                    <td style={{padding:"6px 0"}}>{e.memberName}</td>
+                    <td>{e.completed ? <span className="badge badge-fulfilled">Done</span> : <span className="badge badge-pending">Active</span>}</td>
+                    <td style={{textAlign:"right"}}>
+                      {!e.completed && (
+                        <button className="btn btn-success btn-sm" onClick={async()=>{
+                          await completeEnrollment(e.id, today());
+                          setEnrollments(p=>p.map(x=>x.id===e.id?{...x,completed:true}:x));
+                          const m = members.find(x=>x.id===e.memberId);
+                          if(m){
+                            await upsertMember({...m, points:m.points+c.pts});
+                            setMembers(p=>p.map(x=>x.id===m.id?{...x,points:m.points+c.pts}:x));
+                            const txn={id:genId("TXN"),memberId:m.id,memberName:m.name,type:"challenge",pts:c.pts,note:`Target Met: ${c.name}`,date:today()};
+                            await addTransaction(txn); setTransactions(p=>[txn,...p]);
+                          }
+                          toast("Milestone Complete");
+                        }}>Approve Complete</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function EarnRules({ toast }) {
+export function EarnRules() {
+  return <div className="empty"><div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20}}>Earning Protocol Framework Terminal</div></div>;
+}
+export function ReferralsPanel() {
+  return <div className="empty"><div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20}}>Ambassador Network Verification Engine</div></div>;
+}
+
+export function ExportData({ members, toast }) {
   return (
-    <div className="empty">
-      <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:C.white}}>Core Platform Earn Configuration</div>
-      <p style={{fontSize:12, color:C.muted, marginTop:4}}>Rule adjustments are controlled through the database layout layer logs.</p>
+    <div style={{textAlign:"center", padding:24}}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth="2.5" style={{marginBottom:10}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:C.white}}>Spreadsheet Compilation Matrix</div>
+      <button className="btn btn-primary" style={{marginTop:12}} onClick={()=>toast("Compiling Export Track Stack Spreadsheet...")}>Execute Download Pipeline</button>
     </div>
   );
 }
-
-function ReferralsPanel({ members, setMembers, setTransactions, toast }) {
-  return (
-    <div className="empty">
-      <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:C.white}}>Ambassador Framework Index</div>
-    </div>
-  );
-}
-
-function ExportData({ members, transactions, redemptions, tiers, toast }) {
-  return (
-    <div style={{display:"grid", gridTemplateColumns:"1fr", gap:14}}>
-      <div className="interactive-card" style={{margin:0, textAlign:"center"}}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth="2.5" style={{marginBottom:10}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:C.white}}>CSV Core Engine compilation Export</div>
-        <button className="btn btn-primary" style={{marginTop:14, width:"auto"}} onClick={()=>toast("Compiling Spreadsheet Data Structure...")}>Download Core Records</button>
-      </div>
-    </div>
-  );
-}
-
-export { DisplaySettings, Settings, ChallengesPanel, EarnRules, ExportData, ReferralsPanel };
