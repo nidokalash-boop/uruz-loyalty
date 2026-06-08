@@ -254,6 +254,15 @@ const DEF_DISPLAY = {
     { id:2, name:"Iron Will",       desc:"15-day consecutive streak",      pts:300,  deadline:"4 days",  icon:"🔥", active:true },
     { id:3, name:"Bring the Crew",  desc:"Refer 2 new members",            pts:1000, deadline:"24 days", icon:"👥", active:true },
     { id:4, name:"Early Bird",      desc:"Attend 3 AM classes this month", pts:200,  deadline:"12 days", icon:"🌅", active:true },
+  ],
+  homeMessages: [
+    "Every rep is a deposit into your future self.",
+    "Show up. Put in the work. The results follow.",
+    "Strength isn't given — it's built, session by session.",
+    "Your only competition is who you were yesterday.",
+    "The gym doesn't care about your excuses. Neither should you.",
+    "Built different. Trained harder.",
+    "One more set. Always one more set.",
   ]
 };
 
@@ -346,6 +355,20 @@ function DisplaySettings({toast}){
         </div>
       ))}
       <button className="btn btn-ghost" style={{marginTop:4}} onClick={addTicker}>+ Add Message</button>
+    </div>
+
+    <div className="display-section">
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <div className="display-section-title" style={{marginBottom:0}}>Home Screen Messages</div>
+        <button className="btn btn-primary btn-sm" onClick={()=>setSettings(s=>({...s,homeMessages:[...(s.homeMessages||[]),"New motivational message here"]}))}>+ Add</button>
+      </div>
+      <div style={{fontSize:12,color:C.muted,marginBottom:14}}>These rotate daily on the member portal home screen.</div>
+      {(settings.homeMessages||[]).map((t,i)=>(
+        <div key={i} style={{display:"flex",gap:8,marginBottom:8}}>
+          <input className="form-input" style={{flex:1}} value={t} onChange={e=>setSettings(s=>({...s,homeMessages:s.homeMessages.map((m,j)=>j===i?e.target.value:m)}))} placeholder="Motivational message…"/>
+          <button className="btn btn-danger btn-sm" onClick={()=>setSettings(s=>({...s,homeMessages:s.homeMessages.filter((_,j)=>j!==i)}))}>✕</button>
+        </div>
+      ))}
     </div>
   </div>);
 }
