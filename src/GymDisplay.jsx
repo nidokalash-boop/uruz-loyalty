@@ -114,14 +114,14 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;margin
 @keyframes barFill{from{width:0;}to{width:var(--target-width);}}
 @keyframes countUp{from{opacity:0;}to{opacity:1;}}
 
-.display{width:100vw;height:100vh;background:#050505;color:#FFFDF3;font-family:'Montserrat',sans-serif;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.display{width:100vw;height:100vh;background:#050505;color:#FFFDF3;font-family:'Montserrat',sans-serif;display:flex;flex-direction:column;overflow:hidden;position:relative;box-sizing:border-box;}
 
 /* Subtle noise texture overlay */
 /* noise texture removed for display compatibility */
 
 /* TOPBAR */
 .topbar{
-  height:54px;min-height:54px;flex-shrink:0;
+  height:54px;min-height:54px;max-height:54px;flex-shrink:0;
   background:#050505;
   border-bottom:1px solid #111;
   display:flex;align-items:center;justify-content:space-between;
@@ -141,7 +141,7 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;margin
 .clock{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,2vw,34px);letter-spacing:4px;color:#666;}
 
 /* SLIDE WRAPPER */
-.slide-wrap{flex:1;position:relative;overflow:hidden;min-height:0;}
+.slide-wrap{flex:1;position:relative;overflow:hidden;min-height:0;height:calc(100vh - 94px);max-height:calc(100vh - 94px);}
 .slide{position:absolute;inset:0;padding:clamp(16px,2vw,32px) clamp(20px,2.5vw,40px);display:flex;flex-direction:column;}
 
 /* SLIDE HEADER */
@@ -267,10 +267,11 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;margin
 
 /* TICKER */
 .ticker-bar{
-  height:40px;min-height:40px;flex-shrink:0;
+  height:40px;min-height:40px;max-height:40px;flex-shrink:0;
   background:#050505;border-top:1px solid #1A1A1A;
   display:flex;align-items:center;overflow:hidden;
   position:relative;z-index:10;
+  width:100%;
 }
 .ticker-track{display:flex;white-space:nowrap;animation:ticker 240s linear infinite;}
 .tick-item{
