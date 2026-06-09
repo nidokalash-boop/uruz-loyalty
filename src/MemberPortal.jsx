@@ -5,7 +5,8 @@ import {
   getRedemptions, addRedemption, getRewards, getTiers,
   getMemberEnrollments, enrollInChallenge, getDisplaySettings,
   getEarnRules, addReferral, getMemberByReferralCode,
-  getWorkouts, getMemberUnlocks, unlockWorkout
+  getWorkouts, getMemberUnlocks, unlockWorkout,
+  getWorkoutLogs, saveWorkoutLog, getPrograms
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@200;300;400;500;600;700;800&display=swap');`;
@@ -572,7 +573,7 @@ function LoginFlow({onLogin}){
 }
 
 // ── HOME TAB ─────────────────────────────────────────────
-function HomeTab({member,members,transactions,tiers,challenges,enrollments,workouts,homeMessages,onTabChange,onShowRankings}){
+function HomeTab({member,members,transactions,tiers,challenges,enrollments,workouts,programs,homeMessages,onTabChange,onShowRankings}){
   const tier=getTier(member.points,tiers);
   const next=getNext(member.points,tiers);
   const tierPct=next?Math.round(((member.points-tier.min)/(next.min-tier.min))*100):100;
@@ -584,6 +585,9 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
   const isBirthday=member.birthday&&member.birthday.slice(5,10)===todayMMDD;
   const quote=msgs[new Date().getDay()%msgs.length];
   const newWorkouts=workouts.filter(w=>w.active&&w.access_type==="free").slice(0,2);
+  const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const todayDay=dayNames[new Date().getDay()];
+  const todayWorkouts=programs.flatMap(p=>(p.schedule?.[todayDay]||[]).map(id=>workouts.find(w=>w.id===id)).filter(Boolean));
 
   const actIcon={
     checkin:<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>,
@@ -677,8 +681,28 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
         </div>
       )}
 
+      {/* Today's Program */}
+      {todayWorkouts.length>0&&(
+        <div className="block">
+          <div className="block-header">
+            <span className="block-title">Today's Program</span>
+            <span className="block-action" onClick={()=>onTabChange("workouts")}>See all</span>
+          </div>
+          {todayWorkouts.map((w,idx)=>(
+            <div key={w.id} className="data-row" style={{animationDelay:`${idx*0.06}s`,cursor:"pointer"}} onClick={()=>onTabChange("workouts")}>
+              <div className="data-icon hi"><svg viewBox="0 0 24 24"><path d="M6.5 8.5v7M17.5 8.5v7"/><rect x="4" y="7" width="5" height="10" rx="1.5"/><rect x="15" y="7" width="5" height="10" rx="1.5"/><line x1="9" y1="12" x2="15" y2="12" strokeWidth="2.5"/></svg></div>
+              <div className="data-lbl">
+                <div className="data-main">{w.title}</div>
+                <div className="data-sub">{w.category} · {w.duration_mins}m · {w.difficulty}</div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7A7774" strokeWidth="1.5"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* New Workouts */}
-      {newWorkouts.length>0&&(
+      {newWorkouts.length>0&&todayWorkouts.length===0&&(
         <div className="block">
           <div className="block-header">
             <span className="block-title">New Workouts</span>
@@ -713,17 +737,139 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
   );
 }
 
+// ── WORKOUT LOG MODAL ────────────────────────────────────
+function WorkoutLogModal({ workout, member, onClose, onSaved }) {
+  const exercises = Array.isArray(workout.exercises) ? workout.exercises : [];
+  const [logs, setLogs] = useState(exercises.map(ex=>({
+    name: ex.name, sets: ex.sets||"", reps: ex.reps||"",
+    actualWeight:"", actualReps:"", notes:"",
+  })));
+  const [saving, setSaving] = useState(false);
+  const [pastLogs, setPastLogs] = useState([]);
+
+  useEffect(()=>{
+    getWorkoutLogs(member.id).then(all=>{
+      setPastLogs(all.filter(l=>l.workout_id===workout.id).slice(0,3));
+    });
+  },[]);
+
+  const updateLog = (i, field, val) => {
+    setLogs(prev => prev.map((l,idx)=>idx===i?{...l,[field]:val}:l));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const log = {
+      id: genId("LOG"),
+      workoutId: workout.id,
+      memberId: member.id,
+      memberName: member.name,
+      date: today(),
+      exercises: logs,
+      notes: "",
+    };
+    await saveWorkoutLog(log);
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.9)",zIndex:400,display:"flex",flexDirection:"column",animation:"fadeIn .2s ease"}}>
+      <div style={{background:"#111",flex:1,display:"flex",flexDirection:"column",maxHeight:"100vh"}}>
+        {/* Header */}
+        <div style={{padding:"14px 16px",borderBottom:"1px solid #1A1A1A",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:2,color:"#FFFDF3"}}>Log Workout</div>
+            <div style={{fontSize:10,color:"#7A7774",fontWeight:400}}>{workout.title} · {today()}</div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#7A7774",fontSize:11,letterSpacing:2,textTransform:"uppercase",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Cancel</button>
+        </div>
+
+        <div style={{flex:1,overflowY:"auto",padding:"16px"}}>
+          {/* Past performance */}
+          {pastLogs.length>0&&(
+            <div style={{marginBottom:16,background:"#0A0A0A",border:"1px solid #1A1A1A",padding:12}}>
+              <div style={{fontSize:8,letterSpacing:3,textTransform:"uppercase",color:"#7A7774",fontWeight:700,marginBottom:8}}>Previous Sessions</div>
+              {pastLogs.slice(0,1).map((l,i)=>(
+                <div key={i}>
+                  <div style={{fontSize:10,color:"#4A4845",marginBottom:6}}>{l.date}</div>
+                  {(l.exercises||[]).map((ex,j)=>(
+                    <div key={j} style={{fontSize:11,color:"#6A6764",marginBottom:2}}>
+                      {ex.name}: {ex.actualWeight&&<span style={{color:"#F58020"}}>{ex.actualWeight}</span>} · {ex.actualReps||ex.reps} reps
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Log each exercise */}
+          {exercises.length===0&&(
+            <div style={{fontSize:12,color:"#7A7774",textAlign:"center",padding:"20px 0"}}>No exercises defined for this workout.</div>
+          )}
+          {logs.map((log,i)=>(
+            <div key={i} style={{background:"#0A0A0A",border:"1px solid #1A1A1A",padding:14,marginBottom:10}}>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:1,color:"#FFFDF3",marginBottom:4}}>{log.name}</div>
+              <div style={{fontSize:10,color:"#4A4845",marginBottom:10}}>Target: {log.sets} sets × {log.reps} reps</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div>
+                  <label style={{fontSize:8,letterSpacing:2,textTransform:"uppercase",color:"#7A7774",fontWeight:700,display:"block",marginBottom:4}}>Weight Used</label>
+                  <input value={log.actualWeight} onChange={e=>updateLog(i,"actualWeight",e.target.value)}
+                    placeholder="e.g. 60kg" style={{width:"100%",padding:"10px 12px",background:"#111",border:"1px solid #222",color:"#FFFDF3",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:500,outline:"none"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:8,letterSpacing:2,textTransform:"uppercase",color:"#7A7774",fontWeight:700,display:"block",marginBottom:4}}>Reps Completed</label>
+                  <input value={log.actualReps} onChange={e=>updateLog(i,"actualReps",e.target.value)}
+                    placeholder={log.reps} style={{width:"100%",padding:"10px 12px",background:"#111",border:"1px solid #222",color:"#FFFDF3",fontFamily:"'Montserrat',sans-serif",fontSize:14,fontWeight:500,outline:"none"}}/>
+                </div>
+              </div>
+              <input value={log.notes} onChange={e=>updateLog(i,"notes",e.target.value)}
+                placeholder="Notes (optional)" style={{width:"100%",marginTop:8,padding:"8px 12px",background:"#111",border:"1px solid #1A1A1A",color:"#7A7774",fontFamily:"'Montserrat',sans-serif",fontSize:12,outline:"none"}}/>
+            </div>
+          ))}
+        </div>
+
+        {/* Save button */}
+        <div style={{padding:"12px 16px",borderTop:"1px solid #1A1A1A",flexShrink:0}}>
+          <button onClick={handleSave} disabled={saving} style={{
+            width:"100%",padding:14,background:"#F58020",border:"none",color:"#fff",
+            fontFamily:"'Montserrat',sans-serif",fontSize:10,fontWeight:700,
+            letterSpacing:3,textTransform:"uppercase",cursor:"pointer",
+          }}>{saving?"Saving...":"Save Workout Log"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── WORKOUTS TAB ─────────────────────────────────────────
-function WorkoutsTab({member,tiers}){
-  const [workouts,setWorkouts]=useState([]);
+function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
+  const [workouts,setWorkouts]=useState(propWorkouts||[]);
   const [unlocks,setUnlocks]=useState([]);
   const [loaded,setLoaded]=useState(false);
   const [selected,setSelected]=useState(null);
   const [catFilter,setCatFilter]=useState("All");
+  const [dayFilter,setDayFilter]=useState("All");
   const [toast,setToast]=useState({msg:"",on:false});
   const [redeeming,setRedeeming]=useState(null);
+  const [logging,setLogging]=useState(null);
+  const [loggedToday,setLoggedToday]=useState([]);
   const showToast=msg=>{setToast({msg,on:true});setTimeout(()=>setToast(t=>({...t,on:false})),2600);};
-  useEffect(()=>{Promise.all([getWorkouts(),getMemberUnlocks(member.id)]).then(([w,u])=>{setWorkouts(w);setUnlocks(u);setLoaded(true);});},[member.id]);
+  useEffect(()=>{
+    Promise.all([getMemberUnlocks(member.id),getWorkoutLogs(member.id)]).then(([u,logs])=>{
+      setUnlocks(u);
+      setLoggedToday(logs.filter(l=>l.date===today()).map(l=>l.workout_id));
+      setLoaded(true);
+    });
+  },[member.id]);
+  useEffect(()=>{ if(propWorkouts?.length) setWorkouts(propWorkouts); },[propWorkouts]);
+
+  const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat"];
+  const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const todayDay=dayNames[new Date().getDay()];
+  const programWorkoutIds=dayFilter==="All"
+    ? null
+    : (programs||[]).flatMap(p=>(p.schedule?.[dayFilter]||[]));
   const isUnlocked=wid=>unlocks.some(u=>u.workoutId===wid);
   const memberTier=getTier(member.points,tiers);
   const tierOrder=["Iron","Bronze","Silver","Gold","Elite"];
@@ -744,15 +890,29 @@ function WorkoutsTab({member,tiers}){
     setRedeeming(null);showToast(`Unlocked: ${w.title}!`);
   };
   const cats=["All",...new Set(workouts.map(w=>w.category))];
-  const filtered=workouts.filter(w=>catFilter==="All"||w.category===catFilter);
+  const filtered=workouts.filter(w=>{
+    if(catFilter!=="All"&&w.category!==catFilter) return false;
+    if(programWorkoutIds!==null&&!programWorkoutIds.includes(w.id)) return false;
+    return true;
+  });
   if(!loaded) return <div style={{padding:20,fontSize:12,color:"#4A4845",fontWeight:300}}>Loading…</div>;
   if(selected){
     const w=selected;const accessible=canAccess(w);const exercises=Array.isArray(w.exercises)?w.exercises:[];
     return(
       <div className="tab-content">
-        <div style={{padding:"14px 16px",background:"#0A0A0A",borderBottom:"1px solid #1A1A1A",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setSelected(null)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F58020" strokeWidth="1.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          <span style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#F58020",fontWeight:700}}>Back</span>
+        <div style={{padding:"14px 16px",background:"#0A0A0A",borderBottom:"1px solid #1A1A1A",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setSelected(null)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F58020" strokeWidth="1.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            <span style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#F58020",fontWeight:700}}>Back</span>
+          </div>
+          {canAccess(w)&&Array.isArray(w.exercises)&&w.exercises.length>0&&(
+            <button onClick={()=>setLogging(w)} style={{
+              padding:"7px 14px",background:loggedToday.includes(w.id)?"#1A1A1A":"#F58020",
+              border:"none",color:loggedToday.includes(w.id)?"#2D9B5A":"#fff",
+              fontFamily:"'Montserrat',sans-serif",fontSize:9,fontWeight:700,
+              letterSpacing:2,textTransform:"uppercase",cursor:"pointer",
+            }}>{loggedToday.includes(w.id)?"✓ Logged Today":"Log Workout"}</button>
+          )}
         </div>
         {w.thumbnail_url&&<div style={{width:"100%",height:180,overflow:"hidden",background:"#111"}}><img src={w.thumbnail_url} alt={w.title} style={{width:"100%",height:"100%",objectFit:"cover",opacity:accessible?1:0.3}}/></div>}
         <div style={{padding:"16px"}}>
@@ -806,7 +966,19 @@ function WorkoutsTab({member,tiers}){
   return(
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 56px)"}}>
       <div className="wkt-header"><div className="wkt-title">Workout Library</div></div>
-      <div className="pills">{cats.map(c=><button key={c} className={`pill${catFilter===c?" on":""}`} onClick={()=>setCatFilter(c)}>{c}</button>)}</div>
+      <div className="pills">
+        {cats.map(c=><button key={c} className={`pill${catFilter===c?" on":""}`} onClick={()=>setCatFilter(c)}>{c}</button>)}
+      </div>
+      {(programs||[]).length>0&&(
+        <div className="pills" style={{borderTop:"1px solid #1A1A1A"}}>
+          <button className={`pill${dayFilter==="All"?" on":""}`} onClick={()=>setDayFilter("All")}>All Days</button>
+          {["Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>(
+            <button key={d} className={`pill${dayFilter===d?" on":""}${d===todayDay?" ":""}`} onClick={()=>setDayFilter(d)}
+              style={d===todayDay?{borderColor:"rgba(245,128,32,.4)",color:"#F58020"}:{}}>
+              {d}{d===todayDay?" ·":""}</button>
+          ))}
+        </div>
+      )}
       <div style={{flex:1,overflowY:"auto"}}>
         {filtered.length===0&&<div style={{padding:20,fontSize:12,color:"#4A4845",fontWeight:300}}>No workouts yet.</div>}
         {filtered.map((w,idx)=>{
@@ -823,9 +995,12 @@ function WorkoutsTab({member,tiers}){
                   <div style={{display:"flex",gap:6,fontSize:9,color:"#4A4845"}}>
                     {w.video_url&&<span>Video</span>}{w.pdf_url&&<span>PDF</span>}{Array.isArray(w.exercises)&&w.exercises.length>0&&<span>{w.exercises.length} ex.</span>}
                   </div>
-                  <span className={`wkt-access${accessible?w.access_type==="free"?" free":" unlocked":" locked"}`}>
-                    {accessible?w.access_type==="free"?"Free":"Unlocked":w.access_type==="points"?`${w.points_cost} pts`:w.access_type==="tier"?w.tier_required:"Paid"}
-                  </span>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    {loggedToday.includes(w.id)&&<span style={{fontSize:8,letterSpacing:1.5,background:"rgba(45,155,90,.1)",color:"#2D9B5A",padding:"2px 6px",fontWeight:700,textTransform:"uppercase"}}>✓ Done</span>}
+                    <span className={`wkt-access${accessible?w.access_type==="free"?" free":" unlocked":" locked"}`}>
+                      {accessible?w.access_type==="free"?"Free":"Unlocked":w.access_type==="points"?`${w.points_cost} pts`:w.access_type==="tier"?w.tier_required:"Paid"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1134,8 +1309,8 @@ export default function MemberCentral(){
 
   const loadData=async id=>{
     const mid=id||memberId;
-    const [m,t,r,rw,ti,ds,er,wk]=await Promise.all([
-      getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings(),getEarnRules(),getWorkouts()
+    const [m,t,r,rw,ti,ds,er,wk,pg]=await Promise.all([
+      getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings(),getEarnRules(),getWorkouts(),getPrograms()
     ]);
     const normalized=m.map(normalizeMember);
     setMembers(normalized);setTxns(t);setRdms(r);
@@ -1143,6 +1318,7 @@ export default function MemberCentral(){
     setTiers(ti.length?ti:DEF_TIERS);
     if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
     if(wk?.length) setWorkouts(wk);
+    if(pg?.length) setPrograms(pg);
     if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
     const found=normalized.find(x=>x.id===mid);
     setMember(found||null);setLoaded(true);
@@ -1206,8 +1382,8 @@ export default function MemberCentral(){
           </div>
         </div>
         <div key={tab}>
-          {tab==="home"       &&<HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments} workouts={workouts} homeMessages={homeMessages} onTabChange={setTab} onShowRankings={()=>setShowRankings(true)}/>}
-          {tab==="workouts"   &&<WorkoutsTab member={member} tiers={tiers}/>}
+          {tab==="home"       &&<HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments} workouts={workouts} programs={programs} homeMessages={homeMessages} onTabChange={setTab} onShowRankings={()=>setShowRankings(true)}/>}
+          {tab==="workouts"   &&<WorkoutsTab member={member} tiers={tiers} workouts={workouts} programs={programs}/>}
           {tab==="challenges" &&<ChallengesTab member={member} challenges={challenges}/>}
           {tab==="loyalty"    &&<LoyaltyTab member={member} members={members} transactions={transactions} redemptions={redemptions} rewards={rewards} tiers={tiers} earnRules={earnRules} memberId={member.id} onRequest={handleRequest}/>}
           {tab==="profile"    &&<ProfileTab member={member} tiers={tiers} onLogout={handleLogout} onRefresh={()=>loadData()}/>}
