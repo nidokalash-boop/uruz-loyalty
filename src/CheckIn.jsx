@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getMemberByPhone, getMemberById, upsertMember, updateMemberPin, addTransaction } from "./supabase";
+import { getMemberByPhone, getMemberById, upsertMember, updateMemberPin, addTransaction, getDisplaySettings } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&display=swap');`;
 const C = { orange:"#F58020", cerulean:"#026F91", white:"#FFFDF3", black:"#1F2020", surface:"#252627", card:"#2A2B2C", border:"#333435", muted:"#6B6866", success:"#22C55E", danger:"#EF4444" };
@@ -84,10 +84,21 @@ export default function CheckIn() {
   const [error,setError]     = useState("");
   const [loading,setLoading] = useState(false);
   const [result,setResult]   = useState(null);
+  const [checkinMsg,setCheckinMsg] = useState("Scan & Check In");
+  const [checkinSub,setCheckinSub] = useState("Enter your phone number to check in and earn 50 points");
 
   useEffect(()=>{
     (async()=>{
       const session=getSession();
+      // Load custom check-in message from admin settings
+      try {
+        const ds = await getDisplaySettings();
+        if(ds){
+          const cfg = JSON.parse(ds.config||"{}");
+          if(cfg.checkinMsg) setCheckinMsg(cfg.checkinMsg);
+          if(cfg.checkinSub) setCheckinSub(cfg.checkinSub);
+        }
+      } catch {}
       if(session?.memberId){
         const m=await getMemberById(session.memberId);
         if(m&&m.status==="active"){setMember(normalizeMember(m));setStage("confirm");return;}
@@ -160,6 +171,9 @@ export default function CheckIn() {
     setResult({ type:"success", pts:CHECKIN_PTS, total:updated.points, streak:newStreak });
     setStage("result");
     setLoading(false);
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 2500);
   };
 
   return (
@@ -176,8 +190,8 @@ export default function CheckIn() {
             <div className="brand">URUZ</div>
             <div className="brand-sub">Member Central — Check In</div>
             <div className="divider"/>
-            <div className="step-title">Scan & Check In</div>
-            <div className="step-sub">Enter your phone number to check in and earn 50 points</div>
+            <div className="step-title">{checkinMsg}</div>
+            <div className="step-sub">{checkinSub}</div>
             <label className="lbl">Phone Number</label>
             <input className="inp" placeholder="+961 XX XXX XXX" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handlePhone()}/>
             {error&&<div className="err">{error}</div>}
@@ -241,6 +255,7 @@ export default function CheckIn() {
                   </div>
                 </div>
                 <div style={{marginTop:16,fontSize:12,color:C.muted,fontWeight:500}}>See you tomorrow! 💪</div>
+                <div style={{marginTop:8,fontSize:10,color:"#333130",letterSpacing:2,textTransform:"uppercase",fontWeight:600}}>Returning to home...</div>
               </>
             ) : (
               <>
