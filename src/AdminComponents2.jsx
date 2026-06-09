@@ -237,6 +237,42 @@ tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
 `;
 
 
+
+// ── CHALLENGE ICON LIBRARY ────────────────────────────────
+const CHALLENGE_ICONS = [
+  // Fitness & Strength
+  { id:"dumbbell",    emoji:"🏋",  label:"Dumbbell" },
+  { id:"trophy",      emoji:"🏆",  label:"Trophy" },
+  { id:"medal",       emoji:"🥇",  label:"Medal" },
+  { id:"target",      emoji:"🎯",  label:"Target" },
+  { id:"fire",        emoji:"🔥",  label:"Fire" },
+  { id:"lightning",   emoji:"⚡",  label:"Lightning" },
+  { id:"star",        emoji:"⭐",  label:"Star" },
+  { id:"crown",       emoji:"👑",  label:"Crown" },
+  { id:"muscle",      emoji:"💪",  label:"Muscle" },
+  { id:"running",     emoji:"🏃",  label:"Running" },
+  { id:"cycling",     emoji:"🚴",  label:"Cycling" },
+  { id:"swimming",    emoji:"🏊",  label:"Swimming" },
+  { id:"boxing",      emoji:"🥊",  label:"Boxing" },
+  { id:"yoga",        emoji:"🧘",  label:"Yoga" },
+  { id:"climbing",    emoji:"🧗",  label:"Climbing" },
+  { id:"soccer",      emoji:"⚽",  label:"Soccer" },
+  { id:"basketball",  emoji:"🏀",  label:"Basketball" },
+  { id:"tennis",      emoji:"🎾",  label:"Tennis" },
+  { id:"heart",       emoji:"❤️",  label:"Heart" },
+  { id:"clock",       emoji:"⏱",  label:"Timer" },
+  { id:"calendar",    emoji:"📅",  label:"Calendar" },
+  { id:"group",       emoji:"👥",  label:"Group" },
+  { id:"sunrise",     emoji:"🌅",  label:"Early Bird" },
+  { id:"moon",        emoji:"🌙",  label:"Night" },
+  { id:"checkmark",   emoji:"✅",  label:"Check" },
+  { id:"shield",      emoji:"🛡",  label:"Shield" },
+  { id:"sword",       emoji:"⚔",   label:"Challenge" },
+  { id:"diamond",     emoji:"💎",  label:"Diamond" },
+  { id:"rocket",      emoji:"🚀",  label:"Rocket" },
+  { id:"snowflake",   emoji:"❄️",  label:"Ice" },
+];
+
 // ── DISPLAY SETTINGS ─────────────────────────────────────
 const DEF_DISPLAY = {
   slides: { leaderboard:true, challenges:true, activity:true, spotlight:true },
@@ -335,7 +371,11 @@ function DisplaySettings({toast}){
           </div>
           <div style={{display:"flex",gap:10,marginTop:10}}>
             <input className="form-input" placeholder="Deadline (e.g. 3 days)" value={c.deadline} onChange={e=>updateChallenge(i,"deadline",e.target.value)}/>
-            <input className="form-input" placeholder="Icon emoji" value={c.icon} onChange={e=>updateChallenge(i,"icon",e.target.value)} style={{width:80}}/>
+            <div style={{position:"relative",display:"inline-block"}}>
+              <select className="form-select" style={{width:140}} value={c.icon} onChange={e=>updateChallenge(i,"icon",e.target.value)}>
+                {CHALLENGE_ICONS.map(ic=><option key={ic.id} value={ic.emoji}>{ic.emoji} {ic.label}</option>)}
+              </select>
+            </div>
             <input className="form-input" type="number" placeholder="Goal #" value={c.goal||1} onChange={e=>updateChallenge(i,"goal",Number(e.target.value))} style={{width:80}}/>
           </div>
           <div style={{marginTop:8}}>
