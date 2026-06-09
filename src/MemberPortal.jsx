@@ -748,8 +748,8 @@ function WorkoutLogModal({ workout, member, onClose, onSaved }) {
   const [pastLogs, setPastLogs] = useState([]);
 
   useEffect(()=>{
-    getWorkoutLogs(member.id).then(all=>{
-      setPastLogs(all.filter(l=>l.workout_id===workout.id).slice(0,3));
+    getWorkoutLogs(member.id).catch(()=>[]).then(all=>{
+      setPastLogs((all||[]).filter(l=>l.workout_id===workout.id).slice(0,3));
     });
   },[]);
 
@@ -856,11 +856,20 @@ function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
   const [loggedToday,setLoggedToday]=useState([]);
   const showToast=msg=>{setToast({msg,on:true});setTimeout(()=>setToast(t=>({...t,on:false})),2600);};
   useEffect(()=>{
-    Promise.all([getMemberUnlocks(member.id),getWorkoutLogs(member.id)]).then(([u,logs])=>{
-      setUnlocks(u);
-      setLoggedToday(logs.filter(l=>l.date===today()).map(l=>l.workout_id));
+    const load = async () => {
+      try {
+        const [u, logs] = await Promise.all([
+          getMemberUnlocks(member.id),
+          getWorkoutLogs(member.id).catch(()=>[]),
+        ]);
+        setUnlocks(u||[]);
+        setLoggedToday((logs||[]).filter(l=>l.date===today()).map(l=>l.workout_id));
+      } catch(e) {
+        console.error("WorkoutsTab load error:", e);
+      }
       setLoaded(true);
-    });
+    };
+    load();
   },[member.id]);
   useEffect(()=>{ if(propWorkouts?.length) setWorkouts(propWorkouts); },[propWorkouts]);
 
@@ -1310,7 +1319,7 @@ export default function MemberCentral(){
   const loadData=async id=>{
     const mid=id||memberId;
     const [m,t,r,rw,ti,ds,er,wk,pg]=await Promise.all([
-      getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings(),getEarnRules(),getWorkouts(),getPrograms()
+      getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings(),getEarnRules(),getWorkouts(),getPrograms().catch(()=>[])
     ]);
     const normalized=m.map(normalizeMember);
     setMembers(normalized);setTxns(t);setRdms(r);
@@ -1318,7 +1327,7 @@ export default function MemberCentral(){
     setTiers(ti.length?ti:DEF_TIERS);
     if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
     if(wk?.length) setWorkouts(wk);
-    if(pg?.length) setPrograms(pg);
+    if(pg?.length) setPrograms(pg||[]);
     if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
     const found=normalized.find(x=>x.id===mid);
     setMember(found||null);setLoaded(true);
