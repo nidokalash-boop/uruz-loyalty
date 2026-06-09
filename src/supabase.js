@@ -254,3 +254,51 @@ export async function getAllUnlocks() {
   const { data } = await supabase.from('workout_unlocks').select('*')
   return (data || []).map(u => ({ ...u, workoutId: u.workout_id, memberId: u.member_id }))
 }
+// ── WORKOUT LOGS ──────────────────────────────────────────
+export async function getWorkoutLogs(memberId) {
+  const { data } = await supabase.from('workout_logs')
+    .select('*').eq('member_id', memberId)
+    .order('date', { ascending: false })
+  return data || []
+}
+export async function saveWorkoutLog(log) {
+  const { data } = await supabase.from('workout_logs').upsert({
+    id:          log.id,
+    workout_id:  log.workoutId,
+    member_id:   log.memberId,
+    member_name: log.memberName,
+    date:        log.date,
+    exercises:   log.exercises,
+    notes:       log.notes || '',
+  }).select().single()
+  return data
+}
+export async function getWorkoutLogsByWorkout(workoutId, memberId) {
+  const { data } = await supabase.from('workout_logs')
+    .select('*')
+    .eq('workout_id', workoutId)
+    .eq('member_id', memberId)
+    .order('date', { ascending: false })
+  return data || []
+}
+
+// ── WORKOUT PROGRAMS ──────────────────────────────────────
+export async function getPrograms() {
+  const { data } = await supabase.from('workout_programs')
+    .select('*').order('created_at', { ascending: false })
+  return data || []
+}
+export async function upsertProgram(program) {
+  const { data } = await supabase.from('workout_programs').upsert({
+    id:          program.id,
+    name:        program.name,
+    description: program.description || '',
+    schedule:    program.schedule,
+    active:      program.active !== false,
+    created_at:  program.created_at || new Date().toISOString().slice(0,10),
+  }).select().single()
+  return data
+}
+export async function deleteProgram(id) {
+  await supabase.from('workout_programs').delete().eq('id', id)
+}
