@@ -84,6 +84,45 @@ function fmtDate(d){try{return new Date(d).toLocaleDateString("en-GB",{day:"nume
 function initials(n){return(n||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();}
 const LOGO_URL="https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png";
 
+
+// ── SHARED ICON SYSTEM ────────────────────────────────────
+const ICON_MAP = {
+  trophy:   {label:"Trophy",    paths:["M8 21h8M12 17v4","M17 5h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4","M7 5H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4","M12 17a6 6 0 0 0 6-6V3H6v8a6 6 0 0 0 6 6z"]},
+  dumbbell: {label:"Dumbbell",  paths:["M6.5 8.5v7","M17.5 8.5v7"], rects:[{x:4,y:7,w:5,h:10,r:1.5},{x:15,y:7,w:5,h:10,r:1.5}], lines:[{x1:9,y1:12,x2:15,y2:12,sw:2.5}]},
+  target:   {label:"Target",    circles:[{cx:12,cy:12,r:10},{cx:12,cy:12,r:6},{cx:12,cy:12,r:2}]},
+  fire:     {label:"Fire",      paths:["M12 2c0 6-6 8-6 13a6 6 0 0 0 12 0c0-5-6-7-6-13z","M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"]},
+  lightning:{label:"Lightning", polygons:["13 2 3 14 12 14 11 22 21 10 12 10 13 2"]},
+  star:     {label:"Star",      polygons:["12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"]},
+  crown:    {label:"Crown",     paths:["M2 19h20","M2 5l5 8 5-6 5 6 5-8v14H2z"]},
+  shield:   {label:"Shield",    paths:["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"]},
+  run:      {label:"Running",   paths:["M7.5 13.5l2-3.5 3.5 3 3-5.5","M17 18l-2-4-3 2-1.5 4","M5 21l2-3"], circles:[{cx:13,cy:4,r:2}]},
+  clock:    {label:"Timer",     paths:["M12 6v6l4 2"], circles:[{cx:12,cy:12,r:10}]},
+  calendar: {label:"Calendar",  paths:["M3 10h18","M16 2v4","M8 2v4"], rects:[{x:3,y:4,w:18,h:18,r:2}]},
+  group:    {label:"Group",     paths:["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M23 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75"], circles:[{cx:9,cy:7,r:4}]},
+  sunrise:  {label:"Early Bird",paths:["M12 2v4","M4.22 10.22l2.83 2.83","M1 18h22","M19.78 10.22l-2.83 2.83","M18 18a6 6 0 0 0-12 0"]},
+  heart:    {label:"Heart",     paths:["M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"]},
+  medal:    {label:"Medal",     paths:["M9 2h6l2 5H7z","M12 8v6"], circles:[{cx:12,cy:14,r:6}]},
+  diamond:  {label:"Diamond",   polygons:["12 2 22 9 18 20 6 20 2 9"]},
+  rocket:   {label:"Rocket",    paths:["M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z","M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"]},
+  mountain: {label:"Mountain",  paths:["M8 3L2 21h20L14 3z","M14 3l3.5 7-5.5 3-5.5-3L10 3"]},
+  boxing:   {label:"Boxing",    paths:["M4 8h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z","M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2","M12 4v4"]},
+  checkin:  {label:"Check-in",  paths:["M12 2v3","M12 19v3","M2 12h3","M19 12h3"], circles:[{cx:12,cy:12,r:3}]},
+};
+
+function IconSVG({ id, size=18, color="currentColor", strokeWidth=1.5 }) {
+  const icon = ICON_MAP[id] || ICON_MAP.star;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {icon.paths && icon.paths.map((p,i) => <path key={i} d={p}/>)}
+      {icon.circles && icon.circles.map((c,i) => <circle key={i} cx={c.cx} cy={c.cy} r={c.r}/>)}
+      {icon.rects && icon.rects.map((r,i) => <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx={r.r||0}/>)}
+      {icon.lines && icon.lines.map((l,i) => <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} strokeWidth={l.sw||strokeWidth}/>)}
+      {icon.polygons && icon.polygons.map((p,i) => <polygon key={i} points={p}/>)}
+    </svg>
+  );
+}
+
+
 // ── ANIMATED COUNTER ─────────────────────────────────────
 function AnimatedNumber({ value, duration=1200, className, style }) {
   const [display, setDisplay] = useState(0);
@@ -168,14 +207,14 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .topbar-logo{height:24px;width:auto;}
 .topbar-pts{display:flex;align-items:baseline;gap:4px;}
 .topbar-pts-val{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#F58020;letter-spacing:1px;}
-.topbar-pts-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#4A4845;font-weight:600;}
+.topbar-pts-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#7A7774;font-weight:600;}
 
 /* ── HOME HERO ── */
 .hero{padding:24px 16px 20px;background:linear-gradient(160deg,#130B02 0%,#0A0A0A 55%);position:relative;overflow:hidden;}
 .hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 60px,rgba(245,128,32,.015) 60px,rgba(245,128,32,.015) 61px);pointer-events:none;}
-.hero-greeting{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#4A4845;font-weight:500;margin-bottom:4px;animation:fadeIn .6s ease both;}
+.hero-greeting{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#7A7774;font-weight:500;margin-bottom:4px;animation:fadeIn .6s ease both;}
 .hero-name{font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:3px;color:#FFFDF3;line-height:1;margin-bottom:0;animation:fadeUp .5s cubic-bezier(0.16,1,0.3,1) .1s both;}
-.hero-meta{font-size:10px;color:#4A4845;margin-bottom:20px;font-weight:400;animation:fadeIn .6s ease .2s both;}
+.hero-meta{font-size:10px;color:#7A7774;margin-bottom:20px;font-weight:400;animation:fadeIn .6s ease .2s both;}
 
 .rings-row{display:flex;justify-content:space-around;align-items:center;margin-bottom:20px;}
 
@@ -184,12 +223,12 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .tier-name{font-size:9px;letter-spacing:3px;text-transform:uppercase;font-weight:700;}
 .tier-progress-track{flex:1;height:1px;background:#1A1A1A;position:relative;}
 .tier-progress-fill{position:absolute;top:0;left:0;height:100%;background:#F58020;transition:width 1.4s cubic-bezier(0.16,1,0.3,1);}
-.tier-next{font-size:9px;color:#333130;font-weight:300;white-space:nowrap;}
+.tier-next{font-size:9px;color:#7A7774;font-weight:400;white-space:nowrap;}
 
 /* ── SECTION BLOCKS ── */
 .block{background:#111111;border-bottom:1px solid #1A1A1A;}
 .block-header{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;}
-.block-title{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#4A4845;font-weight:700;}
+.block-title{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#7A7774;font-weight:700;}
 .block-action{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#F58020;font-weight:700;cursor:pointer;}
 
 /* ── QUICK ACTIONS ── */
@@ -197,12 +236,12 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .qa-item{background:#111;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:background .15s;}
 .qa-item:active{background:#161616;}
 .qa-item svg{width:18px;height:18px;stroke:#F58020;stroke-width:1.5;fill:none;}
-.qa-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#4A4845;font-weight:700;}
+.qa-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#8A8784;font-weight:700;}
 
 /* ── MOTIVATION ── */
 .motivation{padding:14px 16px;background:#111;border-left:1px solid #F58020;border-bottom:1px solid #1A1A1A;}
 .motivation-eyebrow{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#F58020;font-weight:700;opacity:.6;margin-bottom:5px;}
-.motivation-text{font-size:12px;color:#8A8784;line-height:1.7;font-weight:500;font-style:italic;}
+.motivation-text{font-size:12px;color:#A8A49E;line-height:1.7;font-weight:500;font-style:italic;}
 
 /* ── DATA ROWS ── */
 .data-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-top:1px solid #1A1A1A;}
@@ -212,8 +251,8 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .data-icon.hi svg{stroke:#F58020;}
 .data-icon.pos svg{stroke:#2D9B5A;}
 .data-lbl{flex:1;}
-.data-main{font-size:13px;font-weight:600;color:#C8C4BE;letter-spacing:.2px;}
-.data-sub{font-size:10px;color:#4A4845;margin-top:1px;font-weight:500;}
+.data-main{font-size:13px;font-weight:600;color:#E8E4DE;letter-spacing:.2px;}
+.data-sub{font-size:10px;color:#8A8784;margin-top:1px;font-weight:500;}
 .data-val{font-family:'Bebas Neue',sans-serif;font-size:20px;}
 .data-val.pos{color:#2D9B5A;}
 .data-val.neg{color:#8B3A3A;}
@@ -237,14 +276,14 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .balance-hero{padding:20px 16px;background:#0A0A0A;border-bottom:1px solid #1A1A1A;}
 .bal-lbl{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#4A4845;font-weight:700;margin-bottom:4px;}
 .bal-val{font-family:'Bebas Neue',sans-serif;font-size:52px;color:#F58020;line-height:1;letter-spacing:-1px;}
-.bal-sub{font-size:10px;color:#333130;margin-top:4px;font-weight:300;}
+.bal-sub{font-size:10px;color:#7A7774;margin-top:4px;font-weight:400;}
 
 /* ── REWARDS ── */
 .rwd-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid #1A1A1A;background:#111;animation:slideRight .3s cubic-bezier(0.16,1,0.3,1) both;}
 .rwd-icon{width:38px;height:38px;background:#161616;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .rwd-icon svg{width:16px;height:16px;stroke:#F58020;stroke-width:1.5;fill:none;}
 .rwd-info{flex:1;}
-.rwd-name{font-size:13px;font-weight:600;color:#C8C4BE;}
+.rwd-name{font-size:13px;font-weight:600;color:#E8E4DE;}
 .rwd-cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#4A4845;margin-top:2px;font-weight:500;}
 .rwd-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#FFFDF3;margin-right:10px;}
 .rwd-btn{padding:7px 14px;background:#F58020;border:none;color:#fff;font-family:'Montserrat',sans-serif;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;white-space:nowrap;flex-shrink:0;}
@@ -257,13 +296,13 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .ch-icon{width:36px;height:36px;background:#161616;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .ch-icon svg{width:15px;height:15px;stroke:#F58020;stroke-width:1.5;fill:none;}
 .ch-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:#FFFDF3;line-height:1;margin-bottom:3px;}
-.ch-desc{font-size:11px;color:#6A6764;font-weight:400;}
+.ch-desc{font-size:11px;color:#9A9690;font-weight:400;}
 .ch-badge{padding:2px 8px;font-size:8px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-left:auto;flex-shrink:0;}
 .ch-badge.joined{background:rgba(245,128,32,.1);color:#F58020;}
 .ch-badge.avail{border:1px solid #222;color:#4A4845;cursor:pointer;transition:all .15s;}
 .ch-badge.avail:hover{border-color:#F58020;color:#F58020;}
 .ch-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
-.ch-dl{font-size:9px;color:#4A4845;display:flex;align-items:center;gap:5px;font-weight:300;}
+.ch-dl{font-size:9px;color:#8A8784;display:flex;align-items:center;gap:5px;font-weight:500;}
 .ch-dl svg{width:10px;height:10px;stroke:currentColor;stroke-width:2;fill:none;}
 .ch-pts{font-family:'Bebas Neue',sans-serif;font-size:17px;color:#F58020;}
 .ch-bar{height:1px;background:#1A1A1A;}
@@ -273,8 +312,8 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 /* ── EARN ── */
 .earn-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #1A1A1A;background:#111;}
 .earn-icon{width:28px;height:28px;background:#161616;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;font-weight:700;color:#4A4845;letter-spacing:1px;}
-.earn-action{font-size:13px;font-weight:600;color:#C8C4BE;}
-.earn-note{font-size:10px;color:#4A4845;margin-top:1px;font-weight:300;}
+.earn-action{font-size:13px;font-weight:600;color:#E8E4DE;}
+.earn-note{font-size:10px;color:#8A8784;margin-top:1px;font-weight:400;}
 .earn-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#F58020;margin-left:auto;}
 
 /* ── TIER LADDER ── */
@@ -291,27 +330,27 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .lb-rank.top{color:#C9A84C;}
 .lb-av{width:32px;height:32px;background:#161616;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#4A4845;}
 .lb-av.top{color:#C9A84C;background:rgba(201,168,76,.08);}
-.lb-name{flex:1;font-size:13px;font-weight:600;color:#C8C4BE;}
+.lb-name{flex:1;font-size:13px;font-weight:600;color:#E8E4DE;}
 .lb-you{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:#F58020;background:rgba(245,128,32,.1);padding:1px 5px;margin-left:6px;font-weight:700;}
-.lb-streak{font-size:10px;color:#333130;font-weight:300;}
+.lb-streak{font-size:10px;color:#7A7774;font-weight:400;}
 .lb-pts{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#C8C4BE;}
 
 /* ── PROFILE ── */
 .profile-hdr{padding:20px 16px;background:#0A0A0A;display:flex;gap:14px;align-items:center;border-bottom:1px solid #1A1A1A;}
 .profile-av{width:52px;height:52px;background:#161616;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:#F58020;flex-shrink:0;animation:pulseOrange 3s ease infinite;}
 .profile-name{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:#FFFDF3;line-height:1;}
-.profile-id{font-size:9px;letter-spacing:2px;color:#4A4845;margin-top:3px;font-weight:300;}
+.profile-id{font-size:9px;letter-spacing:2px;color:#7A7774;margin-top:3px;font-weight:400;}
 .profile-tier{font-size:9px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-top:4px;}
 .info-group-title{padding:10px 16px 6px;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#4A4845;font-weight:700;background:#0A0A0A;}
 .info-row{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:#111;border-bottom:1px solid #1A1A1A;}
-.info-lbl{font-size:11px;color:#4A4845;font-weight:400;}
-.info-val{font-size:12px;color:#C8C4BE;font-weight:700;}
+.info-lbl{font-size:11px;color:#8A8784;font-weight:400;}
+.info-val{font-size:12px;color:#E8E4DE;font-weight:700;}
 .info-val.acc{color:#F58020;font-family:'Bebas Neue',sans-serif;font-size:20px;}
 .ref-box{margin-bottom:1px;background:#111;padding:14px 16px;}
 .ref-lbl{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#4A4845;font-weight:700;margin-bottom:8px;}
 .ref-code{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:4px;color:#F58020;padding:10px 16px;background:#161616;text-align:center;margin-bottom:8px;cursor:pointer;transition:background .15s;}
 .ref-code:active{background:#1C1C1C;}
-.ref-hint{font-size:10px;color:#4A4845;text-align:center;line-height:1.7;font-weight:300;}
+.ref-hint{font-size:10px;color:#8A8784;text-align:center;line-height:1.7;font-weight:400;}
 .signout-btn{width:calc(100% - 32px);margin:12px 16px;padding:12px;background:none;border:1px solid #1A1A1A;color:#4A4845;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
 .signout-btn:hover{border-color:#8B3A3A;color:#8B3A3A;}
 
@@ -330,8 +369,8 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .wkt-lock{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;}
 .wkt-lock svg{width:18px;height:18px;stroke:#4A4845;stroke-width:1.5;fill:none;}
 .wkt-info{flex:1;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;}
-.wkt-name{font-size:13px;font-weight:700;color:#C8C4BE;line-height:1.3;margin-bottom:2px;}
-.wkt-meta{font-size:10px;color:#4A4845;font-weight:300;}
+.wkt-name{font-size:13px;font-weight:700;color:#E8E4DE;line-height:1.3;margin-bottom:2px;}
+.wkt-meta{font-size:10px;color:#8A8784;font-weight:400;}
 .wkt-access{padding:2px 8px;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;}
 .wkt-access.free{background:rgba(45,155,90,.1);color:#2D9B5A;}
 .wkt-access.locked{background:#161616;color:#4A4845;}
@@ -822,7 +861,7 @@ function ChallengesTab({member,challenges}){
     return(
       <div className="ch-item" style={{animationDelay:`${idx*0.06}s`}}>
         <div className="ch-row">
-          <div className="ch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+          <div className="ch-icon"><IconSVG id={c.id_icon||c.icon||"trophy"} size={15} color="#F58020"/></div>
           <div style={{flex:1}}><div className="ch-title">{c.name}</div><div className="ch-desc">{c.desc}</div></div>
           {done?<div className="ch-badge joined">Done</div>:enrolled?<div className="ch-badge joined">Joined</div>:<div className="ch-badge avail" onClick={()=>handleJoin(c)}>{joining===c.id?"...":"Join"}</div>}
         </div>
