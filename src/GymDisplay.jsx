@@ -4,6 +4,45 @@ import { getMembers, getTransactions, getTiers, getDisplaySettings } from "./sup
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@200;300;400;500;600;700&display=swap');`;
 const LOGO_URL = "https://raw.githubusercontent.com/nidokalash-boop/uruz-loyalty/main/URUZ%20LOGO%2001-10%20(1).png";
 
+
+// ── SHARED ICON SYSTEM ────────────────────────────────────
+const ICON_MAP = {
+  trophy:   {label:"Trophy",    paths:["M8 21h8M12 17v4","M17 5h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4","M7 5H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4","M12 17a6 6 0 0 0 6-6V3H6v8a6 6 0 0 0 6 6z"]},
+  dumbbell: {label:"Dumbbell",  paths:["M6.5 8.5v7","M17.5 8.5v7"], rects:[{x:4,y:7,w:5,h:10,r:1.5},{x:15,y:7,w:5,h:10,r:1.5}], lines:[{x1:9,y1:12,x2:15,y2:12,sw:2.5}]},
+  target:   {label:"Target",    circles:[{cx:12,cy:12,r:10},{cx:12,cy:12,r:6},{cx:12,cy:12,r:2}]},
+  fire:     {label:"Fire",      paths:["M12 2c0 6-6 8-6 13a6 6 0 0 0 12 0c0-5-6-7-6-13z","M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"]},
+  lightning:{label:"Lightning", polygons:["13 2 3 14 12 14 11 22 21 10 12 10 13 2"]},
+  star:     {label:"Star",      polygons:["12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"]},
+  crown:    {label:"Crown",     paths:["M2 19h20","M2 5l5 8 5-6 5 6 5-8v14H2z"]},
+  shield:   {label:"Shield",    paths:["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"]},
+  run:      {label:"Running",   paths:["M7.5 13.5l2-3.5 3.5 3 3-5.5","M17 18l-2-4-3 2-1.5 4","M5 21l2-3"], circles:[{cx:13,cy:4,r:2}]},
+  clock:    {label:"Timer",     paths:["M12 6v6l4 2"], circles:[{cx:12,cy:12,r:10}]},
+  calendar: {label:"Calendar",  paths:["M3 10h18","M16 2v4","M8 2v4"], rects:[{x:3,y:4,w:18,h:18,r:2}]},
+  group:    {label:"Group",     paths:["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M23 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75"], circles:[{cx:9,cy:7,r:4}]},
+  sunrise:  {label:"Early Bird",paths:["M12 2v4","M4.22 10.22l2.83 2.83","M1 18h22","M19.78 10.22l-2.83 2.83","M18 18a6 6 0 0 0-12 0"]},
+  heart:    {label:"Heart",     paths:["M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"]},
+  medal:    {label:"Medal",     paths:["M9 2h6l2 5H7z","M12 8v6"], circles:[{cx:12,cy:14,r:6}]},
+  diamond:  {label:"Diamond",   polygons:["12 2 22 9 18 20 6 20 2 9"]},
+  rocket:   {label:"Rocket",    paths:["M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z","M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"]},
+  mountain: {label:"Mountain",  paths:["M8 3L2 21h20L14 3z","M14 3l3.5 7-5.5 3-5.5-3L10 3"]},
+  boxing:   {label:"Boxing",    paths:["M4 8h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z","M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2","M12 4v4"]},
+  checkin:  {label:"Check-in",  paths:["M12 2v3","M12 19v3","M2 12h3","M19 12h3"], circles:[{cx:12,cy:12,r:3}]},
+};
+
+function IconSVG({ id, size=18, color="currentColor", strokeWidth=1.5 }) {
+  const icon = ICON_MAP[id] || ICON_MAP.star;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {icon.paths && icon.paths.map((p,i) => <path key={i} d={p}/>)}
+      {icon.circles && icon.circles.map((c,i) => <circle key={i} cx={c.cx} cy={c.cy} r={c.r}/>)}
+      {icon.rects && icon.rects.map((r,i) => <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx={r.r||0}/>)}
+      {icon.lines && icon.lines.map((l,i) => <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} strokeWidth={l.sw||strokeWidth}/>)}
+      {icon.polygons && icon.polygons.map((p,i) => <polygon key={i} points={p}/>)}
+    </svg>
+  );
+}
+
+
 const DEF_TIERS = [
   { id:"t1", name:"Iron",   min:0,     color:"#555" },
   { id:"t2", name:"Bronze", min:1000,  color:"#8B6534" },
@@ -126,7 +165,7 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
   animation:slideRight .5s cubic-bezier(0.16,1,0.3,1) both;
 }
 .lb-entry:last-child{border-bottom:none;}
-.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:26px;width:34px;text-align:center;flex-shrink:0;color:#444;letter-spacing:1px;}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:26px;width:34px;text-align:center;flex-shrink:0;color:#888;letter-spacing:1px;}
 .lb-rank.g{color:#C9A84C;}
 .lb-rank.s{color:#555;}
 .lb-rank.b{color:#6B4A1E;}
@@ -141,18 +180,18 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .lb-av.s{color:#555;background:rgba(85,85,85,.06);}
 .lb-av.b{color:#6B4A1E;background:rgba(107,74,30,.06);}
 .lb-info{flex:1;}
-.lb-name{font-size:15px;font-weight:600;color:#888;letter-spacing:.3px;transition:color .3s;}
+.lb-name{font-size:15px;font-weight:600;color:#FFFDF3;letter-spacing:.3px;transition:color .3s;}
 .lb-name.g{color:#FFFDF3;}
-.lb-name.s{color:#AAAAAA;}
-.lb-streak{font-size:10px;color:#444;margin-top:2px;font-weight:400;}
-.lb-streak.g{color:#666;}
+.lb-name.s{color:#FFFDF3;}
+.lb-streak{font-size:10px;color:#7A7774;margin-top:2px;font-weight:400;}
+.lb-streak.g{color:#9A9690;}
 .lb-pts{
   font-family:'Bebas Neue',sans-serif;font-size:24px;
   color:#1A1A1A;letter-spacing:1px;
   transition:color .3s;
 }
 .lb-pts.g{color:#F58020;}
-.lb-pts.s{color:#888;}
+.lb-pts.s{color:#C8C4BE;}
 
 /* CHALLENGES SLIDE */
 .ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;}
@@ -170,7 +209,7 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 }
 .ch-icon-box svg{width:17px;height:17px;stroke:#F58020;stroke-width:1.5;fill:none;}
 .ch-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:#FFFDF3;line-height:1;}
-.ch-desc{font-size:11px;color:#666;margin-top:3px;font-weight:400;}
+.ch-desc{font-size:11px;color:#9A9690;margin-top:3px;font-weight:400;}
 .ch-bar-row{display:flex;align-items:center;gap:10px;}
 .ch-bar-bg{flex:1;height:2px;background:#151515;}
 .ch-bar-fill{height:100%;background:#F58020;transition:width 1.2s cubic-bezier(0.16,1,0.3,1);}
@@ -180,13 +219,13 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .ch-deadline{font-size:10px;color:#555;display:flex;align-items:center;gap:5px;font-weight:400;}
 .ch-deadline svg{width:10px;height:10px;stroke:currentColor;stroke-width:2;fill:none;}
 .ch-leaders{border-top:1px solid #111;padding-top:8px;}
-.ch-leaders-lbl{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#555;font-weight:700;margin-bottom:6px;}
+.ch-leaders-lbl{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#7A7774;font-weight:700;margin-bottom:6px;}
 .ch-leader{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
 .ch-leader-rank{font-family:'Bebas Neue',sans-serif;font-size:14px;color:#555;width:18px;}
 .ch-leader-rank.top{color:#C9A84C;}
 .ch-leader-av{width:22px;height:22px;background:#161616;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#666;flex-shrink:0;}
-.ch-leader-name{font-size:12px;font-weight:500;color:#888;flex:1;}
-.ch-leader-pts{font-family:'Bebas Neue',sans-serif;font-size:14px;color:#666;}
+.ch-leader-name{font-size:12px;font-weight:600;color:#C8C4BE;flex:1;}
+.ch-leader-pts{font-family:'Bebas Neue',sans-serif;font-size:14px;color:#C8C4BE;}
 
 /* ACTIVITY SLIDE */
 .act-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 40px;flex:1;}
@@ -203,8 +242,8 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .act-icon svg{width:16px;height:16px;stroke:#444;stroke-width:1.5;fill:none;}
 .act-icon.pos svg{stroke:#2D9B5A;}
 .act-info{flex:1;}
-.act-who{font-size:16px;font-weight:700;color:#AAAAAA;letter-spacing:.3px;}
-.act-what{font-size:11px;color:#555;margin-top:2px;font-weight:400;}
+.act-who{font-size:16px;font-weight:700;color:#E8E4DE;letter-spacing:.3px;}
+.act-what{font-size:11px;color:#8A8784;margin-top:2px;font-weight:400;}
 .act-right{text-align:right;}
 .act-pts{font-family:'Bebas Neue',sans-serif;font-size:22px;}
 .act-pts.pos{color:#2D9B5A;}
@@ -231,7 +270,7 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .spot-stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;width:100%;background:#111;margin-top:6px;}
 .spot-stat{background:#050505;padding:9px 6px;text-align:center;}
 .spot-stat-val{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1;}
-.spot-stat-lbl{font-size:7px;letter-spacing:2.5px;text-transform:uppercase;color:#444;margin-top:2px;font-weight:600;}
+.spot-stat-lbl{font-size:7px;letter-spacing:2.5px;text-transform:uppercase;color:#7A7774;margin-top:2px;font-weight:600;}
 
 /* TICKER */
 .ticker-bar{
@@ -299,7 +338,7 @@ function ChallengesSlide({members, challenges, slideIdx}) {
             <div key={c.id} className="ch-card" style={{animationDelay:`${i*0.08}s`}}>
               <div className="ch-header">
                 <div className="ch-icon-box">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                  <IconSVG id={c.id_icon||c.icon||"trophy"} size={17} color="#F58020"/>
                 </div>
                 <div>
                   <div className="ch-name">{c.name}</div>
@@ -389,7 +428,7 @@ function SpotlightSlide({members, slideIdx}) {
             <div className="spot-av" style={{background:`${medals[i].color}08`,color:medals[i].color,border:`1px solid ${medals[i].color}22`}}>
               {i===0?<div style={{animation:"glow 3s ease infinite"}}>{initials(m.name)}</div>:initials(m.name)}
             </div>
-            <div className="spot-name" style={{color:i===0?"#FFFDF3":medals[i].color}}>{m.name}</div>
+            <div className="spot-name" style={{color:"#FFFDF3"}}>{m.name}</div>
             <div className="spot-label" style={{color:medals[i].color}}>{medals[i].label}</div>
             <div className="spot-stats">
               <div className="spot-stat">
