@@ -238,40 +238,67 @@ tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
 
 
 
-// ── CHALLENGE ICON LIBRARY ────────────────────────────────
-const CHALLENGE_ICONS = [
-  // Fitness & Strength
-  { id:"dumbbell",    emoji:"🏋",  label:"Dumbbell" },
-  { id:"trophy",      emoji:"🏆",  label:"Trophy" },
-  { id:"medal",       emoji:"🥇",  label:"Medal" },
-  { id:"target",      emoji:"🎯",  label:"Target" },
-  { id:"fire",        emoji:"🔥",  label:"Fire" },
-  { id:"lightning",   emoji:"⚡",  label:"Lightning" },
-  { id:"star",        emoji:"⭐",  label:"Star" },
-  { id:"crown",       emoji:"👑",  label:"Crown" },
-  { id:"muscle",      emoji:"💪",  label:"Muscle" },
-  { id:"running",     emoji:"🏃",  label:"Running" },
-  { id:"cycling",     emoji:"🚴",  label:"Cycling" },
-  { id:"swimming",    emoji:"🏊",  label:"Swimming" },
-  { id:"boxing",      emoji:"🥊",  label:"Boxing" },
-  { id:"yoga",        emoji:"🧘",  label:"Yoga" },
-  { id:"climbing",    emoji:"🧗",  label:"Climbing" },
-  { id:"soccer",      emoji:"⚽",  label:"Soccer" },
-  { id:"basketball",  emoji:"🏀",  label:"Basketball" },
-  { id:"tennis",      emoji:"🎾",  label:"Tennis" },
-  { id:"heart",       emoji:"❤️",  label:"Heart" },
-  { id:"clock",       emoji:"⏱",  label:"Timer" },
-  { id:"calendar",    emoji:"📅",  label:"Calendar" },
-  { id:"group",       emoji:"👥",  label:"Group" },
-  { id:"sunrise",     emoji:"🌅",  label:"Early Bird" },
-  { id:"moon",        emoji:"🌙",  label:"Night" },
-  { id:"checkmark",   emoji:"✅",  label:"Check" },
-  { id:"shield",      emoji:"🛡",  label:"Shield" },
-  { id:"sword",       emoji:"⚔",   label:"Challenge" },
-  { id:"diamond",     emoji:"💎",  label:"Diamond" },
-  { id:"rocket",      emoji:"🚀",  label:"Rocket" },
-  { id:"snowflake",   emoji:"❄️",  label:"Ice" },
-];
+// ── CHALLENGE ICON SYSTEM ─────────────────────────────────
+const ICON_MAP = {
+  trophy:   {label:"Trophy",    paths:["M8 21h8M12 17v4","M17 5h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4","M7 5H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4","M12 17a6 6 0 0 0 6-6V3H6v8a6 6 0 0 0 6 6z"]},
+  dumbbell: {label:"Dumbbell",  paths:["M6.5 8.5v7","M17.5 8.5v7"], rects:[{x:4,y:7,w:5,h:10,r:1.5},{x:15,y:7,w:5,h:10,r:1.5}], lines:[{x1:9,y1:12,x2:15,y2:12,sw:2.5}]},
+  target:   {label:"Target",    circles:[{cx:12,cy:12,r:10},{cx:12,cy:12,r:6},{cx:12,cy:12,r:2}]},
+  fire:     {label:"Fire",      paths:["M12 2c0 6-6 8-6 13a6 6 0 0 0 12 0c0-5-6-7-6-13z","M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"]},
+  lightning:{label:"Lightning", polygons:["13 2 3 14 12 14 11 22 21 10 12 10 13 2"]},
+  star:     {label:"Star",      polygons:["12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"]},
+  crown:    {label:"Crown",     paths:["M2 19h20","M2 5l5 8 5-6 5 6 5-8v14H2z"]},
+  shield:   {label:"Shield",    paths:["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"]},
+  run:      {label:"Running",   paths:["M7.5 13.5l2-3.5 3.5 3 3-5.5","M17 18l-2-4-3 2-1.5 4","M5 21l2-3"], circles:[{cx:13,cy:4,r:2}]},
+  clock:    {label:"Timer",     paths:["M12 6v6l4 2"], circles:[{cx:12,cy:12,r:10}]},
+  calendar: {label:"Calendar",  paths:["M3 10h18","M16 2v4","M8 2v4"], rects:[{x:3,y:4,w:18,h:18,r:2}]},
+  group:    {label:"Group",     paths:["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M23 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75"], circles:[{cx:9,cy:7,r:4}]},
+  sunrise:  {label:"Early Bird",paths:["M12 2v4","M4.22 10.22l2.83 2.83","M1 18h22","M19.78 10.22l-2.83 2.83","M18 18a6 6 0 0 0-12 0"]},
+  heart:    {label:"Heart",     paths:["M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"]},
+  medal:    {label:"Medal",     paths:["M9 2h6l2 5H7z","M12 8v6"], circles:[{cx:12,cy:14,r:6}]},
+  diamond:  {label:"Diamond",   polygons:["12 2 22 9 18 20 6 20 2 9"]},
+  rocket:   {label:"Rocket",    paths:["M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z","M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"]},
+  mountain: {label:"Mountain",  paths:["M8 3L2 21h20L14 3z","M14 3l3.5 7-5.5 3-5.5-3L10 3"]},
+  boxing:   {label:"Boxing",    paths:["M4 8h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z","M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2","M12 4v4"]},
+  checkin:  {label:"Check-in",  paths:["M12 2v3","M12 19v3","M2 12h3","M19 12h3"], circles:[{cx:12,cy:12,r:3}]},
+};
+
+function IconSVG({ id, size=18, color="currentColor", strokeWidth=1.5 }) {
+  const icon = ICON_MAP[id] || ICON_MAP.trophy;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {icon.paths&&icon.paths.map((p,i)=><path key={i} d={p}/>)}
+      {icon.circles&&icon.circles.map((c,i)=><circle key={i} cx={c.cx} cy={c.cy} r={c.r}/>)}
+      {icon.rects&&icon.rects.map((r,i)=><rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx={r.r||0}/>)}
+      {icon.lines&&icon.lines.map((l,i)=><line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} strokeWidth={l.sw||strokeWidth}/>)}
+      {icon.polygons&&icon.polygons.map((p,i)=><polygon key={i} points={p}/>)}
+    </svg>
+  );
+}
+
+function IconPicker({ value, onChange }) {
+  return (
+    <div style={{marginTop:8}}>
+      <label style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",fontWeight:700,display:"block",marginBottom:8}}>Challenge Icon</label>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",gap:6}}>
+        {Object.entries(ICON_MAP).map(([id, icon])=>(
+          <div key={id}
+            title={icon.label}
+            onClick={()=>onChange(id)}
+            style={{
+              width:36,height:36,
+              background:value===id?"rgba(245,128,32,.15)":"#2A2B2C",
+              border:value===id?"1px solid #F58020":"1px solid #333435",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              cursor:"pointer",transition:"all .15s",
+            }}>
+            <IconSVG id={id} size={16} color={value===id?"#F58020":"#6B6866"}/>
+          </div>
+        ))}
+      </div>
+      {value && <div style={{marginTop:6,fontSize:11,color:"#F58020",fontWeight:600}}>Selected: {ICON_MAP[value]?.label||value}</div>}
+    </div>
+  );
+}
 
 // ── DISPLAY SETTINGS ─────────────────────────────────────
 const DEF_DISPLAY = {
@@ -371,11 +398,7 @@ function DisplaySettings({toast}){
           </div>
           <div style={{display:"flex",gap:10,marginTop:10}}>
             <input className="form-input" placeholder="Deadline (e.g. 3 days)" value={c.deadline} onChange={e=>updateChallenge(i,"deadline",e.target.value)}/>
-            <div style={{position:"relative",display:"inline-block"}}>
-              <select className="form-select" style={{width:140}} value={c.icon} onChange={e=>updateChallenge(i,"icon",e.target.value)}>
-                {CHALLENGE_ICONS.map(ic=><option key={ic.id} value={ic.emoji}>{ic.emoji} {ic.label}</option>)}
-              </select>
-            </div>
+            <IconPicker value={c.id_icon||c.icon} onChange={v=>updateChallenge(i,"id_icon",v)}/>
             <input className="form-input" type="number" placeholder="Goal #" value={c.goal||1} onChange={e=>updateChallenge(i,"goal",Number(e.target.value))} style={{width:80}}/>
           </div>
           <div style={{marginTop:8}}>
