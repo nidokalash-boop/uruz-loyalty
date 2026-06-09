@@ -1016,6 +1016,8 @@ function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
           );
         })}
       </div>
+      {logging&&<WorkoutLogModal workout={logging} member={member} onClose={()=>setLogging(null)} onSaved={()=>{setLoggedToday(prev=>[...prev,logging.id]);setLogging(null);showToast("Workout logged! 💪");}}/>}
+      <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
     </div>
   );
 }
@@ -1318,19 +1320,30 @@ export default function MemberCentral(){
 
   const loadData=async id=>{
     const mid=id||memberId;
-    const [m,t,r,rw,ti,ds,er,wk,pg]=await Promise.all([
-      getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings(),getEarnRules(),getWorkouts(),getPrograms().catch(()=>[])
-    ]);
-    const normalized=m.map(normalizeMember);
-    setMembers(normalized);setTxns(t);setRdms(r);
-    setRewards(rw.length?rw:DEF_REWARDS);
-    setTiers(ti.length?ti:DEF_TIERS);
-    if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
-    if(wk?.length) setWorkouts(wk);
-    if(pg?.length) setPrograms(pg||[]);
-    if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
-    const found=normalized.find(x=>x.id===mid);
-    setMember(found||null);setLoaded(true);
+    let m=[],t=[],r=[],rw=[],ti=[],ds=null,er=[],wk=[],pg=[];
+    try {
+      [m,t,r,rw,ti,ds,er,wk,pg]=await Promise.all([
+        getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings(),getEarnRules(),getWorkouts(),getPrograms().catch(()=>[])
+      ]);
+    } catch(e) {
+      console.error("loadData error:", e);
+      m=await getMembers().catch(()=>[]);
+    }
+    try {
+      const normalized=(m||[]).map(normalizeMember);
+      setMembers(normalized);setTxns(t||[]);setRdms(r||[]);
+      setRewards((rw||[]).length?rw:DEF_REWARDS);
+      setTiers((ti||[]).length?ti:DEF_TIERS);
+      if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
+      if(wk?.length) setWorkouts(wk);
+      if(pg?.length) setPrograms(pg||[]);
+      if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
+      const found=normalized.find(x=>x.id===mid);
+      setMember(found||null);setLoaded(true);
+    } catch(e) {
+      console.error("loadData processing error:", e);
+      setLoaded(true);
+    }
     if(found){
       const tierKey=`uruz:tier:${found.id}`;
       const lastTier=localStorage.getItem(tierKey);
