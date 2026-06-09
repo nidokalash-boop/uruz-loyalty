@@ -1303,6 +1303,7 @@ export default function MemberCentral(){
   const [earnRules,setEarnRules]     = useState(HOW_TO_EARN);
   const [enrollments,setEnrollments] = useState([]);
   const [workouts,setWorkouts]       = useState([]);
+  const [programs,setPrograms]       = useState([]);
   const [homeMessages,setHomeMsgs]   = useState(URUZ_QUOTES);
   const [tab,setTab]                 = useState("home");
   const [showRankings,setShowRankings] = useState(false);
