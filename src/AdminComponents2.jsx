@@ -326,7 +326,9 @@ const DEF_DISPLAY = {
     "The gym doesn't care about your excuses. Neither should you.",
     "Built different. Trained harder.",
     "One more set. Always one more set.",
-  ]
+  ],
+  checkinMsg: "Scan & Check In",
+  checkinSub: "Enter your phone number to check in and earn 50 points",
 };
 
 function DisplaySettings({toast}){
@@ -418,6 +420,15 @@ function DisplaySettings({toast}){
         </div>
       ))}
       <button className="btn btn-ghost" style={{marginTop:4}} onClick={addTicker}>+ Add Message</button>
+    </div>
+
+    <div className="display-section">
+      <div className="display-section-title">Check-in Page Message</div>
+      <div style={{fontSize:12,color:C.muted,marginBottom:14,lineHeight:1.6}}>Customize the headline and subtitle shown on the QR check-in page.</div>
+      <label style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:C.muted,fontWeight:700,display:"block",marginBottom:6}}>Headline</label>
+      <input className="form-input" value={settings.checkinMsg||""} onChange={e=>setSettings(s=>({...s,checkinMsg:e.target.value}))} placeholder="Scan & Check In" style={{marginBottom:12}}/>
+      <label style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:C.muted,fontWeight:700,display:"block",marginBottom:6}}>Subtitle</label>
+      <input className="form-input" value={settings.checkinSub||""} onChange={e=>setSettings(s=>({...s,checkinSub:e.target.value}))} placeholder="Enter your phone number to check in and earn 50 points"/>
     </div>
 
     <div className="display-section">
