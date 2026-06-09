@@ -102,7 +102,7 @@ function useCounter(target, duration=1200, trigger) {
 const CSS = `
 ${FONTS}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
+html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;margin:0;padding:0;}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
@@ -117,15 +117,11 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .display{width:100vw;height:100vh;background:#050505;color:#FFFDF3;font-family:'Montserrat',sans-serif;display:flex;flex-direction:column;overflow:hidden;position:relative;}
 
 /* Subtle noise texture overlay */
-.display::before{
-  content:'';position:fixed;inset:0;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events:none;z-index:999;
-}
+/* noise texture removed for display compatibility */
 
 /* TOPBAR */
 .topbar{
-  height:54px;flex-shrink:0;
+  height:54px;min-height:54px;flex-shrink:0;
   background:#050505;
   border-bottom:1px solid #111;
   display:flex;align-items:center;justify-content:space-between;
@@ -142,11 +138,11 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .dot{height:1px;background:#151515;transition:all .4s ease;}
 .dot.on{background:#F58020;width:28px;}
 .dot:not(.on){width:16px;}
-.clock{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:4px;color:#444;}
+.clock{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,2vw,34px);letter-spacing:4px;color:#666;}
 
 /* SLIDE WRAPPER */
-.slide-wrap{flex:1;position:relative;overflow:hidden;}
-.slide{position:absolute;inset:0;padding:28px 32px;display:flex;flex-direction:column;}
+.slide-wrap{flex:1;position:relative;overflow:hidden;min-height:0;}
+.slide{position:absolute;inset:0;padding:clamp(16px,2vw,32px) clamp(20px,2.5vw,40px);display:flex;flex-direction:column;}
 
 /* SLIDE HEADER */
 .slide-eyebrow{
@@ -165,7 +161,7 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
   animation:slideRight .5s cubic-bezier(0.16,1,0.3,1) both;
 }
 .lb-entry:last-child{border-bottom:none;}
-.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:26px;width:34px;text-align:center;flex-shrink:0;color:#888;letter-spacing:1px;}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,2.2vw,36px);width:clamp(30px,3vw,48px);text-align:center;flex-shrink:0;color:#888;letter-spacing:1px;}
 .lb-rank.g{color:#C9A84C;}
 .lb-rank.s{color:#555;}
 .lb-rank.b{color:#6B4A1E;}
@@ -180,12 +176,12 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .lb-av.s{color:#555;background:rgba(85,85,85,.06);}
 .lb-av.b{color:#6B4A1E;background:rgba(107,74,30,.06);}
 .lb-info{flex:1;}
-.lb-name{font-size:15px;font-weight:600;color:#FFFDF3;letter-spacing:.3px;transition:color .3s;}
+.lb-name{font-size:clamp(14px,1.4vw,22px);font-weight:600;color:#FFFDF3;letter-spacing:.3px;transition:color .3s;}
 .lb-name.g{color:#FFFDF3;}
 .lb-name.s{color:#FFFDF3;}
 .lb-streak{font-size:10px;color:#7A7774;margin-top:2px;font-weight:400;}
 .lb-streak.g{color:#9A9690;}
-.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#FFFDF3;letter-spacing:1px;transition:color .3s;}
+.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,2vw,32px);color:#FFFDF3;letter-spacing:1px;transition:color .3s;}
 .lb-pts.g{color:#F58020;}
 .lb-pts.s{color:#FFFDF3;}
 .lb-pts.b{color:#FFFDF3;}
@@ -229,7 +225,7 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .act-entry{
   display:flex;align-items:center;gap:14px;
   padding:12px 0;border-bottom:1px solid #0E0E0E;
-  animation:slideLeft .4s cubic-bezier(0.16,1,0.3,1) both;
+  
 }
 .act-entry:last-child{border-bottom:none;}
 .act-icon{
@@ -255,14 +251,14 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
   animation:fadeUp .6s cubic-bezier(0.16,1,0.3,1) both;
 }
 .spot-card.first{animation:fadeUp .4s cubic-bezier(0.16,1,0.3,1) both;}
-.spot-rank{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:1;letter-spacing:2px;}
+.spot-rank{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,5vw,80px);line-height:1;letter-spacing:2px;}
 .spot-av{
   width:68px;height:68px;
   display:flex;align-items:center;justify-content:center;
   font-family:'Bebas Neue',sans-serif;font-size:26px;
   letter-spacing:2px;
 }
-.spot-name{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;}
+.spot-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,2.5vw,42px);letter-spacing:3px;}
 .spot-label{font-size:8px;letter-spacing:4px;text-transform:uppercase;font-weight:700;margin-top:-6px;}
 .spot-stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;width:100%;background:#111;margin-top:6px;}
 .spot-stat{background:#050505;padding:9px 6px;text-align:center;}
@@ -271,9 +267,10 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 
 /* TICKER */
 .ticker-bar{
-  height:38px;flex-shrink:0;
-  background:#050505;border-top:1px solid #0D0D0D;
+  height:40px;min-height:40px;flex-shrink:0;
+  background:#050505;border-top:1px solid #1A1A1A;
   display:flex;align-items:center;overflow:hidden;
+  position:relative;z-index:10;
 }
 .ticker-track{display:flex;white-space:nowrap;animation:ticker 240s linear infinite;}
 .tick-item{
@@ -385,7 +382,7 @@ function ActivitySlide({transactions, slideIdx}) {
   const recent = [...transactions].slice(0,8);
   const half = Math.ceil(recent.length/2);
   const Entry = ({a, idx}) => (
-    <div className="act-entry" style={{animationDelay:`${idx*0.07}s`}}>
+    <div className="act-entry">
       <div className={`act-icon${a.pts>0?" pos":""}`}>{ACT_ICONS[a.type]||ACT_ICONS.checkin}</div>
       <div className="act-info">
         <div className="act-who">{a.memberName||a.member_name}</div>
@@ -487,7 +484,7 @@ export default function GymDisplay() {
   };
 
   useEffect(()=>{loadData();},[]);
-  useEffect(()=>{const i=setInterval(loadData,60000);return()=>clearInterval(i);},[]);
+  useEffect(()=>{const i=setInterval(loadData,20000);return()=>clearInterval(i);},[]);
 
   const SLIDES = ["leaderboard","challenges","activity","spotlight"].filter(s=>slides[s]);
   useEffect(()=>{
