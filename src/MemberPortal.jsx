@@ -961,7 +961,6 @@ function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
           )}
         </div>
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
-        {showRankings&&<RankingsOverlay members={members} memberId={member.id} tiers={tiers} onClose={()=>setShowRankings(false)}/>}
       </div>
     );
   }
