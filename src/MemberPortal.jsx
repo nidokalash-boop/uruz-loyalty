@@ -5,9 +5,9 @@ import {
   getRedemptions, addRedemption, getRewards, getTiers,
   getMemberEnrollments, enrollInChallenge, getDisplaySettings,
   getEarnRules, addReferral, getMemberByReferralCode,
-  getWorkouts, getMemberUnlocks, unlockWorkout,
-  getWorkoutLogs, saveWorkoutLog, getPrograms
+  getWorkouts, getMemberUnlocks, unlockWorkout
 } from "./supabase";
+import { getWorkoutLogs, saveWorkoutLog, getPrograms } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@200;300;400;500;600;700;800&display=swap');`;
 
@@ -856,20 +856,13 @@ function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
   const [loggedToday,setLoggedToday]=useState([]);
   const showToast=msg=>{setToast({msg,on:true});setTimeout(()=>setToast(t=>({...t,on:false})),2600);};
   useEffect(()=>{
-    const load = async () => {
-      try {
-        const [u, logs] = await Promise.all([
-          getMemberUnlocks(member.id),
-          getWorkoutLogs(member.id).catch(()=>[]),
-        ]);
-        setUnlocks(u||[]);
-        setLoggedToday((logs||[]).filter(l=>l.date===today()).map(l=>l.workout_id));
-      } catch(e) {
-        console.error("WorkoutsTab load error:", e);
-      }
-      setLoaded(true);
-    };
-    load();
+    getMemberUnlocks(member.id)
+      .then(u=>setUnlocks(u||[]))
+      .catch(()=>{})
+      .finally(()=>setLoaded(true));
+    getWorkoutLogs(member.id)
+      .then(logs=>setLoggedToday((logs||[]).filter(l=>l.date===today()).map(l=>l.workout_id)))
+      .catch(()=>{});
   },[member.id]);
   useEffect(()=>{ if(propWorkouts?.length) setWorkouts(propWorkouts); },[propWorkouts]);
 
@@ -1320,31 +1313,19 @@ export default function MemberCentral(){
 
   const loadData=async id=>{
     const mid=id||memberId;
-    let m=[],t=[],r=[],rw=[],ti=[],ds=null,er=[],wk=[],pg=[];
-    try {
-      [m,t,r,rw,ti,ds,er,wk,pg]=await Promise.all([
-        getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings(),getEarnRules(),getWorkouts(),getPrograms().catch(()=>[])
-      ]);
-    } catch(e) {
-      console.error("loadData error:", e);
-      m=await getMembers().catch(()=>[]);
-    }
-    let found = null;
-    try {
-      const normalized=(m||[]).map(normalizeMember);
-      setMembers(normalized);setTxns(t||[]);setRdms(r||[]);
-      setRewards((rw||[]).length?rw:DEF_REWARDS);
-      setTiers((ti||[]).length?ti:DEF_TIERS);
-      if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
-      if(wk?.length) setWorkouts(wk);
-      if(pg?.length) setPrograms(pg||[]);
-      if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
-      found=normalized.find(x=>x.id===mid)||null;
-      setMember(found);setLoaded(true);
-    } catch(e) {
-      console.error("loadData processing error:", e);
-      setLoaded(true);
-    }
+    const [m,t,r,rw,ti,ds,er,wk]=await Promise.all([
+      getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings(),getEarnRules(),getWorkouts()
+    ]);
+    const normalized=m.map(normalizeMember);
+    setMembers(normalized);setTxns(t);setRdms(r);
+    setRewards(rw.length?rw:DEF_REWARDS);
+    setTiers(ti.length?ti:DEF_TIERS);
+    if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
+    if(wk?.length) setWorkouts(wk);
+    try { const pg=await getPrograms(); if(pg?.length) setPrograms(pg); } catch{}
+    if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
+    const found=normalized.find(x=>x.id===mid);
+    setMember(found||null);setLoaded(true);
     if(found){
       const tierKey=`uruz:tier:${found.id}`;
       const lastTier=localStorage.getItem(tierKey);
