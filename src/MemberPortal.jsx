@@ -175,7 +175,7 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 60px,rgba(245,128,32,.015) 60px,rgba(245,128,32,.015) 61px);pointer-events:none;}
 .hero-greeting{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#4A4845;font-weight:500;margin-bottom:4px;animation:fadeIn .6s ease both;}
 .hero-name{font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:3px;color:#FFFDF3;line-height:1;margin-bottom:0;animation:fadeUp .5s cubic-bezier(0.16,1,0.3,1) .1s both;}
-.hero-meta{font-size:10px;color:#333130;margin-bottom:20px;font-weight:300;animation:fadeIn .6s ease .2s both;}
+.hero-meta{font-size:10px;color:#4A4845;margin-bottom:20px;font-weight:400;animation:fadeIn .6s ease .2s both;}
 
 .rings-row{display:flex;justify-content:space-around;align-items:center;margin-bottom:20px;}
 
@@ -202,7 +202,7 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 /* ── MOTIVATION ── */
 .motivation{padding:14px 16px;background:#111;border-left:1px solid #F58020;border-bottom:1px solid #1A1A1A;}
 .motivation-eyebrow{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#F58020;font-weight:700;opacity:.6;margin-bottom:5px;}
-.motivation-text{font-size:12px;color:#6A6764;line-height:1.7;font-weight:300;font-style:italic;}
+.motivation-text{font-size:12px;color:#8A8784;line-height:1.7;font-weight:500;font-style:italic;}
 
 /* ── DATA ROWS ── */
 .data-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-top:1px solid #1A1A1A;}
@@ -212,8 +212,8 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .data-icon.hi svg{stroke:#F58020;}
 .data-icon.pos svg{stroke:#2D9B5A;}
 .data-lbl{flex:1;}
-.data-main{font-size:13px;font-weight:400;color:#C8C4BE;letter-spacing:.2px;}
-.data-sub{font-size:10px;color:#4A4845;margin-top:1px;font-weight:300;}
+.data-main{font-size:13px;font-weight:600;color:#C8C4BE;letter-spacing:.2px;}
+.data-sub{font-size:10px;color:#4A4845;margin-top:1px;font-weight:500;}
 .data-val{font-family:'Bebas Neue',sans-serif;font-size:20px;}
 .data-val.pos{color:#2D9B5A;}
 .data-val.neg{color:#8B3A3A;}
@@ -224,7 +224,7 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;cursor:pointer;transition:all .15s;}
 .nav-btn svg{width:18px;height:18px;stroke:#333130;stroke-width:1.5;fill:none;transition:stroke .15s;}
 .nav-btn.on svg{stroke:#F58020;}
-.nav-lbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#333130;font-weight:700;transition:color .15s;}
+.nav-lbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#333130;font-weight:800;transition:color .15s;}
 .nav-btn.on .nav-lbl{color:#F58020;}
 
 /* ── LOYALTY TABS ── */
@@ -244,7 +244,7 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .rwd-icon{width:38px;height:38px;background:#161616;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .rwd-icon svg{width:16px;height:16px;stroke:#F58020;stroke-width:1.5;fill:none;}
 .rwd-info{flex:1;}
-.rwd-name{font-size:13px;font-weight:400;color:#C8C4BE;}
+.rwd-name{font-size:13px;font-weight:600;color:#C8C4BE;}
 .rwd-cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#4A4845;margin-top:2px;font-weight:500;}
 .rwd-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#FFFDF3;margin-right:10px;}
 .rwd-btn{padding:7px 14px;background:#F58020;border:none;color:#fff;font-family:'Montserrat',sans-serif;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;white-space:nowrap;flex-shrink:0;}
@@ -256,8 +256,8 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .ch-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
 .ch-icon{width:36px;height:36px;background:#161616;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .ch-icon svg{width:15px;height:15px;stroke:#F58020;stroke-width:1.5;fill:none;}
-.ch-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:#FFFDF3;line-height:1;margin-bottom:3px;}
-.ch-desc{font-size:10px;color:#4A4845;font-weight:300;}
+.ch-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:#FFFDF3;line-height:1;margin-bottom:3px;}
+.ch-desc{font-size:11px;color:#6A6764;font-weight:400;}
 .ch-badge{padding:2px 8px;font-size:8px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-left:auto;flex-shrink:0;}
 .ch-badge.joined{background:rgba(245,128,32,.1);color:#F58020;}
 .ch-badge.avail{border:1px solid #222;color:#4A4845;cursor:pointer;transition:all .15s;}
@@ -273,7 +273,7 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 /* ── EARN ── */
 .earn-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #1A1A1A;background:#111;}
 .earn-icon{width:28px;height:28px;background:#161616;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;font-weight:700;color:#4A4845;letter-spacing:1px;}
-.earn-action{font-size:13px;font-weight:400;color:#C8C4BE;}
+.earn-action{font-size:13px;font-weight:600;color:#C8C4BE;}
 .earn-note{font-size:10px;color:#4A4845;margin-top:1px;font-weight:300;}
 .earn-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#F58020;margin-left:auto;}
 
@@ -291,7 +291,7 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .lb-rank.top{color:#C9A84C;}
 .lb-av{width:32px;height:32px;background:#161616;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#4A4845;}
 .lb-av.top{color:#C9A84C;background:rgba(201,168,76,.08);}
-.lb-name{flex:1;font-size:13px;font-weight:400;color:#C8C4BE;}
+.lb-name{flex:1;font-size:13px;font-weight:600;color:#C8C4BE;}
 .lb-you{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:#F58020;background:rgba(245,128,32,.1);padding:1px 5px;margin-left:6px;font-weight:700;}
 .lb-streak{font-size:10px;color:#333130;font-weight:300;}
 .lb-pts{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#C8C4BE;}
@@ -305,7 +305,7 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .info-group-title{padding:10px 16px 6px;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#4A4845;font-weight:700;background:#0A0A0A;}
 .info-row{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:#111;border-bottom:1px solid #1A1A1A;}
 .info-lbl{font-size:11px;color:#4A4845;font-weight:400;}
-.info-val{font-size:12px;color:#C8C4BE;font-weight:500;}
+.info-val{font-size:12px;color:#C8C4BE;font-weight:700;}
 .info-val.acc{color:#F58020;font-family:'Bebas Neue',sans-serif;font-size:20px;}
 .ref-box{margin-bottom:1px;background:#111;padding:14px 16px;}
 .ref-lbl{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#4A4845;font-weight:700;margin-bottom:8px;}
@@ -330,7 +330,7 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .wkt-lock{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;}
 .wkt-lock svg{width:18px;height:18px;stroke:#4A4845;stroke-width:1.5;fill:none;}
 .wkt-info{flex:1;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;}
-.wkt-name{font-size:13px;font-weight:500;color:#C8C4BE;line-height:1.3;margin-bottom:2px;}
+.wkt-name{font-size:13px;font-weight:700;color:#C8C4BE;line-height:1.3;margin-bottom:2px;}
 .wkt-meta{font-size:10px;color:#4A4845;font-weight:300;}
 .wkt-access{padding:2px 8px;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;}
 .wkt-access.free{background:rgba(45,155,90,.1);color:#2D9B5A;}
@@ -1007,8 +1007,8 @@ function ProfileTab({member,tiers,onLogout,onRefresh}){
 // ── ROOT ─────────────────────────────────────────────────
 const TABS=[
   {id:"home",     label:"Home",       icon:<svg viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M5 10v9h5v-5h4v5h5v-9"/></svg>},
-  {id:"workouts", label:"Workouts",   icon:<svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M6 12h12"/></svg>},
-  {id:"challenges",label:"Challenges",icon:<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>},
+  {id:"workouts", label:"Workouts",   icon:<svg viewBox="0 0 24 24"><path d="M6.5 8.5v7M17.5 8.5v7"/><rect x="4" y="7" width="5" height="10" rx="1.5"/><rect x="15" y="7" width="5" height="10" rx="1.5"/><line x1="9" y1="12" x2="15" y2="12" strokeWidth="2.5"/></svg>},
+  {id:"challenges",label:"Challenges",icon:<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4"/><path d="M17 5h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4"/><path d="M7 5H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4"/><path d="M12 17a6 6 0 0 0 6-6V3H6v8a6 6 0 0 0 6 6z"/></svg>},
   {id:"loyalty",  label:"Loyalty",    icon:<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>},
   {id:"profile",  label:"Profile",    icon:<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>},
 ];
