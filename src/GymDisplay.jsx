@@ -185,13 +185,10 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
 .lb-name.s{color:#FFFDF3;}
 .lb-streak{font-size:10px;color:#7A7774;margin-top:2px;font-weight:400;}
 .lb-streak.g{color:#9A9690;}
-.lb-pts{
-  font-family:'Bebas Neue',sans-serif;font-size:24px;
-  color:#1A1A1A;letter-spacing:1px;
-  transition:color .3s;
-}
+.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#FFFDF3;letter-spacing:1px;transition:color .3s;}
 .lb-pts.g{color:#F58020;}
-.lb-pts.s{color:#C8C4BE;}
+.lb-pts.s{color:#FFFDF3;}
+.lb-pts.b{color:#FFFDF3;}
 
 /* CHALLENGES SLIDE */
 .ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;}
@@ -278,7 +275,7 @@ html,body,#root{width:100%;height:100%;background:#050505;overflow:hidden;}
   background:#050505;border-top:1px solid #0D0D0D;
   display:flex;align-items:center;overflow:hidden;
 }
-.ticker-track{display:flex;white-space:nowrap;animation:ticker 80s linear infinite;}
+.ticker-track{display:flex;white-space:nowrap;animation:ticker 240s linear infinite;}
 .tick-item{
   display:inline-flex;align-items:center;gap:10px;
   padding:0 40px;
