@@ -1139,9 +1139,9 @@ export default function MemberCentral(){
       <div className="app">
         <div className="topbar">
           <img src={LOGO_URL} alt="URUZ" className="topbar-logo"/>
-          <div className="topbar-pts">
-            <span className="topbar-pts-val">{member.points.toLocaleString()}</span>
-            <span className="topbar-pts-lbl">pts</span>
+          <div style={{fontSize:8,letterSpacing:2.5,textTransform:"uppercase",color:"#4A4845",fontWeight:600,textAlign:"right",lineHeight:1.5}}>
+            Built for the neighborhood<br/>
+            <span style={{color:"#F58020"}}>Powered by you</span>
           </div>
         </div>
         <div key={tab}>
