@@ -961,6 +961,7 @@ function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
           )}
         </div>
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
+        {logging&&<WorkoutLogModal workout={logging} member={member} onClose={()=>setLogging(null)} onSaved={()=>{setLoggedToday(prev=>[...prev,logging.id]);setLogging(null);showToast("Workout logged! 💪");}}/>}
       </div>
     );
   }
