@@ -572,7 +572,7 @@ function LoginFlow({onLogin}){
 }
 
 // ── HOME TAB ─────────────────────────────────────────────
-function HomeTab({member,members,transactions,tiers,challenges,enrollments,workouts,homeMessages,onTabChange}){
+function HomeTab({member,members,transactions,tiers,challenges,enrollments,workouts,homeMessages,onTabChange,onShowRankings}){
   const tier=getTier(member.points,tiers);
   const next=getNext(member.points,tiers);
   const tierPct=next?Math.round(((member.points-tier.min)/(next.min-tier.min))*100):100;
@@ -630,7 +630,7 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
           <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="1"/><path d="M16 12H8M12 9v6"/></svg>
           <span className="qa-lbl">Redeem</span>
         </div>
-        <div className="qa-item" onClick={()=>onTabChange("loyalty")}>
+        <div className="qa-item" onClick={onShowRankings}>
           <svg viewBox="0 0 24 24"><path d="M8 6l4-4 4 4M12 2v13M3 17l2 4h14l2-4"/></svg>
           <span className="qa-lbl">Rankings</span>
         </div>
@@ -799,6 +799,7 @@ function WorkoutsTab({member,tiers}){
           )}
         </div>
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
+        {showRankings&&<RankingsOverlay members={members} memberId={member.id} tiers={tiers} onClose={()=>setShowRankings(false)}/>}
       </div>
     );
   }
@@ -924,7 +925,7 @@ function LoyaltyTab({member,members,transactions,redemptions,rewards,tiers,earnR
       </div>
       <div className="ltabs">
         {["activity","rewards","earn","rankings"].map(s=>(
-          <button key={s} className={`ltab${sub===s?" on":""}`} onClick={()=>setSub(s)}>{s}</button>
+          <button key={s} id={`ltab-${s}`} className={`ltab${sub===s?" on":""}`} onClick={()=>setSub(s)}>{s}</button>
         ))}
       </div>
       <div style={{flex:1,overflowY:"auto"}} key={sub}>
@@ -1044,6 +1045,64 @@ function ProfileTab({member,tiers,onLogout,onRefresh}){
   );
 }
 
+
+// ── RANKINGS OVERLAY ─────────────────────────────────────
+function RankingsOverlay({ members, memberId, tiers, onClose }) {
+  const sorted = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points);
+  return (
+    <div style={{
+      position:"fixed",inset:0,background:"#0A0A0A",zIndex:300,
+      display:"flex",flexDirection:"column",
+      animation:"fadeUp .3s cubic-bezier(0.16,1,0.3,1) both",
+    }}>
+      {/* Header */}
+      <div style={{
+        height:48,background:"#0A0A0A",borderBottom:"1px solid #1A1A1A",
+        display:"flex",alignItems:"center",justifyContent:"space-between",
+        padding:"0 16px",flexShrink:0,
+      }}>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:3,color:"#C8C4BE"}}>Rankings</div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:"#7A7774",fontSize:11,letterSpacing:2,textTransform:"uppercase",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Close</button>
+      </div>
+      {/* List */}
+      <div style={{flex:1,overflowY:"auto"}}>
+        {sorted.map((m,i)=>{
+          const rank=i+1;
+          const isMe=m.id===memberId;
+          const tier=tiers?[...tiers].sort((a,b)=>b.min-a.min).find(t=>m.points>=(t.min_pts||t.min||0)):null;
+          const rankColor=rank===1?"#C9A84C":rank===2?"#888":rank===3?"#8B6534":"#555";
+          return(
+            <div key={m.id} style={{
+              display:"flex",alignItems:"center",gap:12,
+              padding:"12px 16px",
+              borderBottom:"1px solid #1A1A1A",
+              background:isMe?"#131308":"#111",
+              borderLeft:isMe?"1px solid #F58020":"none",
+              animation:`slideRight .3s cubic-bezier(0.16,1,0.3,1) ${i*0.04}s both`,
+            }}>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,width:32,textAlign:"center",color:rankColor,flexShrink:0}}>{rank}</div>
+              <div style={{
+                width:36,height:36,background:"#1C1C1C",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:12,fontWeight:700,color:rank<=3?rankColor:"#555",flexShrink:0,
+              }}>{initials(m.name)}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:isMe?"#FFFDF3":"#E8E4DE",display:"flex",alignItems:"center",gap:6}}>
+                  {m.name}
+                  {isMe&&<span style={{fontSize:8,letterSpacing:1.5,textTransform:"uppercase",color:"#F58020",background:"rgba(245,128,32,.1)",padding:"1px 5px",fontWeight:700}}>You</span>}
+                </div>
+                <div style={{fontSize:10,color:"#7A7774",marginTop:1,fontWeight:400}}>{m.streak||0}d streak · {m.checkins||0} check-ins</div>
+              </div>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:rank===1?"#F58020":"#C8C4BE"}}>{m.points.toLocaleString()}</div>
+            </div>
+          );
+        })}
+        {sorted.length===0&&<div style={{padding:24,fontSize:12,color:"#4A4845",textAlign:"center"}}>No members yet.</div>}
+      </div>
+    </div>
+  );
+}
+
 // ── ROOT ─────────────────────────────────────────────────
 const TABS=[
   {id:"home",     label:"Home",       icon:<svg viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M5 10v9h5v-5h4v5h5v-9"/></svg>},
@@ -1067,6 +1126,7 @@ export default function MemberCentral(){
   const [workouts,setWorkouts]       = useState([]);
   const [homeMessages,setHomeMsgs]   = useState(URUZ_QUOTES);
   const [tab,setTab]                 = useState("home");
+  const [showRankings,setShowRankings] = useState(false);
   const [loaded,setLoaded]           = useState(false);
   const [toast,setToast]             = useState({msg:"",on:false});
   const [tierCelebration,setTierCelebration] = useState(null);
@@ -1146,7 +1206,7 @@ export default function MemberCentral(){
           </div>
         </div>
         <div key={tab}>
-          {tab==="home"       &&<HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments} workouts={workouts} homeMessages={homeMessages} onTabChange={setTab}/>}
+          {tab==="home"       &&<HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments} workouts={workouts} homeMessages={homeMessages} onTabChange={setTab} onShowRankings={()=>setShowRankings(true)}/>}
           {tab==="workouts"   &&<WorkoutsTab member={member} tiers={tiers}/>}
           {tab==="challenges" &&<ChallengesTab member={member} challenges={challenges}/>}
           {tab==="loyalty"    &&<LoyaltyTab member={member} members={members} transactions={transactions} redemptions={redemptions} rewards={rewards} tiers={tiers} earnRules={earnRules} memberId={member.id} onRequest={handleRequest}/>}
@@ -1160,6 +1220,7 @@ export default function MemberCentral(){
           ))}
         </div>
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
+        {showRankings&&<RankingsOverlay members={members} memberId={member.id} tiers={tiers} onClose={()=>setShowRankings(false)}/>}
         {tierCelebration&&<TierCelebration tier={tierCelebration} onDismiss={()=>setTierCelebration(null)}/>}
       </div>
     </>
