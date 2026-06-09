@@ -5,9 +5,9 @@ import {
   getRedemptions, addRedemption, getRewards, getTiers,
   getMemberEnrollments, enrollInChallenge, getDisplaySettings,
   getEarnRules, addReferral, getMemberByReferralCode,
-  getWorkouts, getMemberUnlocks, unlockWorkout
+  getWorkouts, getMemberUnlocks, unlockWorkout,
+  getWorkoutLogs, saveWorkoutLog, getPrograms
 } from "./supabase";
-import { getWorkoutLogs, saveWorkoutLog, getPrograms } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@200;300;400;500;600;700;800&display=swap');`;
 
