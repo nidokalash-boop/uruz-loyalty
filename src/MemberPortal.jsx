@@ -1329,6 +1329,7 @@ export default function MemberCentral(){
       console.error("loadData error:", e);
       m=await getMembers().catch(()=>[]);
     }
+    let found = null;
     try {
       const normalized=(m||[]).map(normalizeMember);
       setMembers(normalized);setTxns(t||[]);setRdms(r||[]);
@@ -1338,8 +1339,8 @@ export default function MemberCentral(){
       if(wk?.length) setWorkouts(wk);
       if(pg?.length) setPrograms(pg||[]);
       if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
-      const found=normalized.find(x=>x.id===mid);
-      setMember(found||null);setLoaded(true);
+      found=normalized.find(x=>x.id===mid)||null;
+      setMember(found);setLoaded(true);
     } catch(e) {
       console.error("loadData processing error:", e);
       setLoaded(true);
