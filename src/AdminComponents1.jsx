@@ -597,15 +597,15 @@ function BulkImport({ members, setMembers, toast }) {
   const [importing, setImporting] = useState(false);
   const [imported, setImported]   = useState(0);
 
-  const MEMBER_TEMPLATE = `Name,Phone,Email,Birthday\nAlex Rivera,+961 70 123 456,alex@email.com,1995-06-15\nSara K.,+961 71 234 567,,1990-03-22`;
-  const WORKOUT_TEMPLATE = `Title,Category,Difficulty,Duration,AccessType,PointsCost,PriceLabel,TierRequired,VideoURL,Description\nFull Body Burn,Strength,Beginner,45,free,,,,,Great full body workout for all levels`;
   const downloadTemplate = (type) => {
-    const csv = type === "members" ? MEMBER_TEMPLATE : WORKOUT_TEMPLATE;
+    const csv = type === "members"
+      ? ["Name,Phone,Email,Birthday", "Alex Rivera,+961 70 123 456,alex@email.com,1995-06-15", "Sara K.,+961 71 234 567,,1990-03-22"].join("\n")
+      : ["Title,Category,Difficulty,Duration,AccessType,PointsCost,PriceLabel,TierRequired,VideoURL,Description", "Full Body Burn,Strength,Beginner,45,free,,,,,Great full body workout for all levels"].join("\n");
     const blob = new Blob([csv], { type:"text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `URUZ_${type}_template.csv`;
+    a.download = "URUZ_" + type + "_template.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
