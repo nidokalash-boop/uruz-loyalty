@@ -1338,17 +1338,18 @@ export default function MemberCentral(){
     setTiers(ti.length?ti:DEF_TIERS);
     if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
     if(wk?.length) setWorkouts(wk);
-    try { const pg=await getPrograms(); if(pg?.length) setPrograms(pg); } catch{}
-    // load member's assigned programs to determine private workout access
+    // load member's assigned programs — drives Today's Workout + private access
     try {
-      const memberAssignments = await getMemberProgramsByMember(mid);
-      const pg = await getPrograms();
-      if(pg?.length) setPrograms(pg);
-      const wkIds = memberAssignments.flatMap(a => {
-        const prog = pg.find(p => p.id === a.programId);
-        if(!prog) return [];
-        return Object.values(prog.schedule || {}).flat();
-      });
+      const [allPg, memberAssignments] = await Promise.all([
+        getPrograms(),
+        getMemberProgramsByMember(mid)
+      ]);
+      const assignedProgramIds = new Set(memberAssignments.map(a => a.programId));
+      const memberPrograms = allPg.filter(p => assignedProgramIds.has(p.id));
+      setPrograms(memberPrograms.length ? memberPrograms : []);
+      const wkIds = memberPrograms.flatMap(p =>
+        Object.values(p.schedule || {}).flat()
+      );
       setAssignedWorkoutIds([...new Set(wkIds)]);
     } catch { setAssignedWorkoutIds([]); }
     if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
