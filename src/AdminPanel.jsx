@@ -258,6 +258,17 @@ const ALL_NAV=[
   {id:"settings",   icon:"⚙", label:"Settings"},
 ];
 
+const DEF_DISPLAY = {
+  slides: { leaderboard:true, challenges:true, activity:true, spotlight:true },
+  slideOrder: ["leaderboard","challenges","activity","spotlight"],
+  slideDuration: 12,
+  ticker: [],
+  challenges: [],
+  homeMessages: [],
+  checkinMsg: "Scan & Check In",
+  checkinSub: "Enter your phone number to check in and earn 50 points",
+};
+
 export default function AdminPanel(){
   const [staffSession,setStaffSession] = useState(null);
   const [staffList,setStaffList]       = useState([]);
@@ -271,8 +282,6 @@ export default function AdminPanel(){
   const [loaded,setLoaded]             = useState(false);
   const [toast,showToast]              = useToast();
 
-  const [displaySettings, setDisplaySettings] = useState(null);
-
   useEffect(()=>{
     (async()=>{
       const sl=await getStaff();
@@ -283,18 +292,16 @@ export default function AdminPanel(){
         if(valid) setStaffSession(session);
         else clearStaffSession();
       }
-      const [m,t,r,rw,ti,ds]=await Promise.all([getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers(),getDisplaySettings()]);
+      const [m,t,r,rw,ti]=await Promise.all([getMembers(),getTransactions(),getRedemptions(),getRewards(),getTiers()]);
       setMembers(m.map(normalizeMember));setTxns(t);setRdms(r);
       setRewards(rw.length?rw:DEF_REWARDS);
       setTiers(ti.length?ti:DEF_TIERS);
-      if(ds){try{setDisplaySettings({...DEF_DISPLAY,...JSON.parse(ds.config||"{}")});}catch{}}
       setLoaded(true);
     })();
   },[]);
 
   const handleLogin=(session)=>{
     setStaffSession(session);
-    // reload staff list after potential first-time setup
     getStaff().then(setStaffList);
   };
 
@@ -343,7 +350,7 @@ export default function AdminPanel(){
             {page==="staff"      &&<StaffManagement staffList={staffList} setStaffList={setStaffList} toast={showToast}/>}
             {page==="display"    &&<DisplaySettings toast={showToast}/>}
             {page==="workouts"   &&<WorkoutsPanel members={members} toast={showToast}/>}
-            {page==="challenges" &&<ChallengesPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast} displaySettings={displaySettings}/>}
+            {page==="challenges" &&<ChallengesPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast}/>}
             {page==="earn"       &&<EarnRules toast={showToast}/>}
             {page==="referrals"  &&<ReferralsPanel members={members} setMembers={setMembers} setTransactions={setTxns} toast={showToast}/>}
             {page==="export"     &&<ExportData members={members} transactions={transactions} redemptions={redemptions} tiers={tiers} toast={showToast}/>}
