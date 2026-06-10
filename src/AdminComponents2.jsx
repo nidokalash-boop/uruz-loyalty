@@ -479,17 +479,30 @@ function Settings({tiers,setTiers,toast}){
 
 
 // ── CHALLENGES PANEL ─────────────────────────────────────
-function ChallengesPanel({members, setMembers, setTransactions, toast, displaySettings}) {
+// FIX: fetches displaySettings directly instead of relying on prop
+function ChallengesPanel({members, setMembers, setTransactions, toast}) {
   const [enrollments, setEnrollments] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+  const [challenges, setChallenges]   = useState([]);
+  const [loaded, setLoaded]           = useState(false);
 
   useEffect(() => {
-    getEnrollments().then(data => { setEnrollments(data); setLoaded(true); });
+    (async () => {
+      const [enrs, ds] = await Promise.all([getEnrollments(), getDisplaySettings()]);
+      setEnrollments(enrs);
+      if (ds) {
+        try {
+          const cfg = JSON.parse(ds.config || "{}");
+          const all = cfg.challenges || DEF_DISPLAY.challenges;
+          setChallenges(all.filter(c => c.active !== false));
+        } catch {
+          setChallenges(DEF_DISPLAY.challenges.filter(c => c.active !== false));
+        }
+      } else {
+        setChallenges(DEF_DISPLAY.challenges.filter(c => c.active !== false));
+      }
+      setLoaded(true);
+    })();
   }, []);
-
-  const challenges = displaySettings?.challenges
-    ? displaySettings.challenges.filter(c => c.active !== false)
-    : [];
 
   const handleComplete = async (enrollment) => {
     const pts = challenges.find(c => String(c.id) === enrollment.challengeId)?.pts || 0;
@@ -520,13 +533,11 @@ function ChallengesPanel({members, setMembers, setTransactions, toast, displaySe
       </div>
 
       {challenges.length === 0 && (
-        <div className="empty">No active challenges. Add them in the TV Display settings.</div>
+        <div className="empty">No active challenges. Add them in TV Display → Active Challenges, then save.</div>
       )}
 
       {challenges.map(c => {
         const cEnrollments = enrollments.filter(e => e.challengeId === String(c.id));
-        const pending = cEnrollments.filter(e => !e.completed);
-        const done = cEnrollments.filter(e => e.completed);
         return (
           <div key={c.id} style={{background:C.surface,border:`1px solid ${C.border}`,marginBottom:16}}>
             <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:12}}>
@@ -726,8 +737,6 @@ function EarnRules({ toast }) {
 }
 
 
-
-
 // ── REFERRALS ─────────────────────────────────────────────
 function ReferralsPanel({ members, setMembers, setTransactions, toast }) {
   const [referrals, setReferrals] = useState([]);
@@ -757,7 +766,6 @@ function ReferralsPanel({ members, setMembers, setTransactions, toast }) {
       date: today(),
     };
     await addReferral(ref);
-    // Award points to referrer
     const newPoints = referrer.points + REF_PTS;
     await upsertMember({...referrer, points: newPoints});
     setMembers(prev => prev.map(m => m.id===referrer.id ? {...m,points:newPoints} : m));
@@ -806,7 +814,6 @@ function ReferralsPanel({ members, setMembers, setTransactions, toast }) {
         </div>
       )}
 
-      {/* Member referral codes */}
       <div style={{marginTop:24}}>
         <div className="sec-title" style={{marginBottom:14}}>Member Referral Codes</div>
         <div className="tbl-wrap">
