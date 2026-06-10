@@ -99,6 +99,8 @@ const CSS = `
 ${FONTS}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body,#root{height:100%;background:#1F2020;color:#FFFDF3;font-family:'Montserrat',sans-serif;}
+
+/* ── DESKTOP LAYOUT ── */
 .admin{display:flex;height:100vh;overflow:hidden;background:#1F2020;}
 .sidebar{width:220px;flex-shrink:0;background:#252627;border-right:1px solid #333435;display:flex;flex-direction:column;overflow:hidden;}
 .sb-brand{padding:20px 18px 16px;border-bottom:1px solid #333435;}
@@ -121,12 +123,56 @@ html,body,#root{height:100%;background:#1F2020;color:#FFFDF3;font-family:'Montse
 .topbar-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#FFFDF3;}
 .topbar-date{font-size:11px;color:#6B6866;font-weight:500;font-family:'JetBrains Mono',monospace;}
 .content{flex:1;overflow-y:auto;padding:24px;}
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+
+/* ── MOBILE TOPBAR ── */
+.mob-topbar{display:none;height:52px;background:#252627;border-bottom:1px solid #333435;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:100;flex-shrink:0;}
+.mob-topbar-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#F58020;}
+.mob-topbar-right{text-align:right;}
+.mob-topbar-page{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:#FFFDF3;}
+.mob-topbar-staff{font-size:9px;color:#6B6866;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
+
+/* ── MOBILE BOTTOM NAV ── */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#252627;border-top:1px solid #333435;z-index:200;height:58px;}
+.mob-nav-inner{display:flex;height:100%;overflow-x:auto;scrollbar-width:none;padding:0 4px;}
+.mob-nav-inner::-webkit-scrollbar{display:none;}
+.mob-nav-btn{flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0 10px;background:none;border:none;cursor:pointer;min-width:52px;position:relative;}
+.mob-nav-icon{font-size:16px;line-height:1;transition:transform .15s;}
+.mob-nav-btn.on .mob-nav-icon{transform:scale(1.15);}
+.mob-nav-lbl{font-size:7px;letter-spacing:1px;text-transform:uppercase;color:#6B6866;font-weight:700;font-family:'Montserrat',sans-serif;transition:color .15s;}
+.mob-nav-btn.on .mob-nav-lbl{color:#F58020;}
+.mob-nav-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;background:#EF4444;border-radius:50%;}
+
+/* ── STATS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 .stat-card{background:#252627;border:1px solid #333435;padding:18px;position:relative;overflow:hidden;}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent,#F58020);}
-.stat-val{font-family:'Bebas Neue',sans-serif;font-size:42px;line-height:1;color:#FFFDF3;}
-.stat-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;margin-top:4px;font-weight:700;}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:38px;line-height:1;color:#FFFDF3;}
+.stat-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;margin-top:4px;font-weight:700;}
 .stat-sub{font-size:11px;color:#6B6866;margin-top:6px;font-weight:500;}
+.stat-delta{font-size:10px;margin-top:4px;font-weight:700;}
+.stat-delta.up{color:#22C55E;}
+.stat-delta.down{color:#EF4444;}
+
+/* ── PERIOD FILTER ── */
+.period-bar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px;}
+.period-btn{padding:6px 12px;background:#252627;border:1px solid #333435;color:#6B6866;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+.period-btn.on{border-color:#F58020;color:#F58020;background:rgba(245,128,32,.08);}
+.period-btn:hover{border-color:#F58020;color:#F58020;}
+
+/* ── DASHBOARD CARDS ── */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.dash-card{background:#252627;border:1px solid #333435;padding:16px;}
+.dash-card-title{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#6B6866;font-weight:700;margin-bottom:14px;}
+
+/* ── MEMBER MOBILE CARDS ── */
+.member-card{background:#252627;border:1px solid #333435;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+.member-card:active{background:#2A2B2C;}
+.member-card-info{flex:1;min-width:0;}
+.member-card-name{font-size:14px;font-weight:700;color:#FFFDF3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.member-card-sub{font-size:11px;color:#6B6866;margin-top:2px;}
+.member-card-pts{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#F58020;flex-shrink:0;}
+
+/* ── GENERAL ── */
 .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .sec-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#FFFDF3;}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;transition:all .15s;}
@@ -139,9 +185,9 @@ html,body,#root{height:100%;background:#1F2020;color:#FFFDF3;font-family:'Montse
 .btn-danger:hover{background:#EF4444;color:#fff;}
 .btn-success{background:#22C55E;color:#fff;}
 .btn-sm{padding:5px 10px;font-size:10px;}
-.tbl-wrap{background:#252627;border:1px solid #333435;overflow:hidden;margin-bottom:20px;}
-table{width:100%;border-collapse:collapse;}
-th{padding:10px 14px;text-align:left;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;font-weight:700;border-bottom:1px solid #333435;background:#2A2B2C;}
+.tbl-wrap{background:#252627;border:1px solid #333435;overflow:hidden;overflow-x:auto;margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;min-width:480px;}
+th{padding:10px 14px;text-align:left;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;font-weight:700;border-bottom:1px solid #333435;background:#2A2B2C;white-space:nowrap;}
 td{padding:11px 14px;font-size:13px;font-weight:500;border-bottom:1px solid #333435;vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
 tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
@@ -152,19 +198,19 @@ tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
 .badge-pending{background:rgba(245,166,35,.15);color:#F5A623;}
 .badge-fulfilled{background:rgba(34,197,94,.15);color:#22C55E;}
 .badge-cancelled{background:rgba(107,104,102,.2);color:#6B6866;}
-.search-row{display:flex;gap:10px;margin-bottom:16px;align-items:center;}
-.search-input{flex:1;padding:9px 14px;background:#252627;border:1px solid #333435;color:#FFFDF3;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:500;outline:none;transition:border-color .15s;}
+.search-row{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
+.search-input{flex:1;min-width:160px;padding:9px 14px;background:#252627;border:1px solid #333435;color:#FFFDF3;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:500;outline:none;transition:border-color .15s;}
 .search-input::placeholder{color:#6B6866;}
 .search-input:focus{border-color:#F58020;}
 .av{width:32px;height:32px;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;flex-shrink:0;}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
 .modal{background:#252627;border:1px solid #333435;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:slideup .25s cubic-bezier(0.16,1,0.3,1);}
 @keyframes slideup{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #333435;}
 .modal-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#FFFDF3;}
-.modal-close{background:none;border:none;color:#6B6866;font-size:20px;cursor:pointer;}
+.modal-close{background:none;border:none;color:#6B6866;font-size:20px;cursor:pointer;padding:4px 8px;}
 .modal-body{padding:20px;}
-.modal-footer{padding:14px 20px;border-top:1px solid #333435;display:flex;gap:10px;justify-content:flex-end;}
+.modal-footer{padding:14px 20px;border-top:1px solid #333435;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
 .form-row{margin-bottom:14px;}
 .form-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;font-weight:700;margin-bottom:6px;display:block;}
 .form-input,.form-select{width:100%;padding:9px 12px;background:#2A2B2C;border:1px solid #333435;color:#FFFDF3;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:500;outline:none;transition:border-color .15s;}
@@ -175,15 +221,15 @@ tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
 .ds-cell{background:#2A2B2C;padding:14px 12px;text-align:center;}
 .ds-val{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#FFFDF3;line-height:1;}
 .ds-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6B6866;margin-top:3px;font-weight:700;}
-.reward-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;}
+.reward-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
 .rwd-card{background:#252627;border:1px solid #333435;padding:16px;transition:border-color .15s;}
 .rwd-card:hover{border-color:rgba(245,128,32,.4);}
 .rwd-icon{font-size:24px;margin-bottom:8px;display:block;}
 .rwd-name{font-weight:700;color:#FFFDF3;margin-bottom:4px;font-size:14px;}
 .rwd-pts{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#F58020;}
-.rwd-actions{display:flex;gap:6px;margin-top:12px;}
-.tabs{display:flex;gap:0;border-bottom:1px solid #333435;margin-bottom:20px;}
-.tab-btn{padding:9px 18px;background:none;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B6866;position:relative;transition:color .15s;}
+.rwd-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+.tabs{display:flex;gap:0;border-bottom:1px solid #333435;margin-bottom:20px;overflow-x:auto;}
+.tab-btn{padding:9px 18px;background:none;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B6866;position:relative;transition:color .15s;white-space:nowrap;}
 .tab-btn.on{color:#F58020;}
 .tab-btn.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#F58020;}
 .empty{padding:40px;text-align:center;color:#6B6866;font-size:13px;border:1px solid #333435;}
@@ -237,25 +283,50 @@ tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
 .ch-edit-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;margin-bottom:10px;}
 
 ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:#1F2020;}::-webkit-scrollbar-thumb{background:#333435;}
-`;
 
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .topbar{display:none;}
+  .mob-topbar{display:flex;}
+  .mob-nav{display:block;}
+  .content{padding:14px;padding-bottom:74px;}
+  .stat-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+  .stat-val{font-size:28px;}
+  .stat-card{padding:14px;}
+  .dash-grid{grid-template-columns:1fr;gap:12px;}
+  .period-bar{gap:5px;margin-bottom:14px;}
+  .period-btn{padding:5px 9px;font-size:9px;letter-spacing:1px;}
+  .modal-bg{padding:0;align-items:flex-end;}
+  .modal{max-width:100%;max-height:92vh;border-bottom-left-radius:0;border-bottom-right-radius:0;}
+  .tbl-wrap{display:none;}
+  .member-list-mobile{display:block;}
+  .reward-grid{grid-template-columns:repeat(2,1fr);}
+  .sec-hdr{flex-wrap:wrap;gap:8px;}
+}
+@media(min-width:769px){
+  .mob-nav{display:none !important;}
+  .mob-topbar{display:none !important;}
+  .member-list-mobile{display:none !important;}
+}
+`;
 
 // ── ROOT ──────────────────────────────────────────────────
 const ALL_NAV=[
-  {id:"dashboard",  icon:"◉", label:"Dashboard"},
-  {id:"members",    icon:"⊞", label:"Members"},
-  {id:"award",      icon:"◆", label:"Award Points"},
-  {id:"redemptions",icon:"🎟", label:"Redemptions"},
-  {id:"rewards",    icon:"⭐", label:"Rewards"},
-  {id:"staff",      icon:"👥", label:"Staff"},
-  {id:"display",    icon:"📺", label:"TV Display"},
-  {id:"workouts",   icon:"💪", label:"Workouts"},
-  {id:"challenges", icon:"⚔",  label:"Challenges"},
-  {id:"earn",       icon:"💰", label:"Earn Rules"},
-  {id:"referrals",  icon:"👥", label:"Referrals"},
-  {id:"export",     icon:"⬇", label:"Export Data"},
-  {id:"import",     icon:"↑", label:"Bulk Import"},
-  {id:"settings",   icon:"⚙", label:"Settings"},
+  {id:"dashboard",  icon:"◉", label:"Dashboard",   emoji:"◉"},
+  {id:"members",    icon:"⊞", label:"Members",      emoji:"👥"},
+  {id:"award",      icon:"◆", label:"Award",        emoji:"◆"},
+  {id:"redemptions",icon:"🎟", label:"Redeem",       emoji:"🎟"},
+  {id:"rewards",    icon:"⭐", label:"Rewards",      emoji:"⭐"},
+  {id:"staff",      icon:"👥", label:"Staff",        emoji:"🔑"},
+  {id:"display",    icon:"📺", label:"TV",           emoji:"📺"},
+  {id:"workouts",   icon:"💪", label:"Workouts",     emoji:"💪"},
+  {id:"challenges", icon:"⚔",  label:"Challenges",  emoji:"⚔"},
+  {id:"earn",       icon:"💰", label:"Earn",         emoji:"💰"},
+  {id:"referrals",  icon:"🔗", label:"Referrals",    emoji:"🔗"},
+  {id:"export",     icon:"⬇", label:"Export",       emoji:"⬇"},
+  {id:"import",     icon:"↑",  label:"Import",       emoji:"↑"},
+  {id:"settings",   icon:"⚙", label:"Settings",     emoji:"⚙"},
 ];
 
 const DEF_DISPLAY = {
@@ -316,16 +387,25 @@ export default function AdminPanel(){
   const role=staffSession.role;
   const roleInfo=ROLES[role];
   const visibleNav=ALL_NAV.filter(n=>canAccess(role,n.id));
+  const currentLabel=ALL_NAV.find(n=>n.id===page)?.label||"";
 
   return(
     <>
       <style>{CSS}</style>
       <div className="admin">
+
+        {/* ── DESKTOP SIDEBAR ── */}
         <div className="sidebar">
           <div className="sb-brand"><div className="sb-logo">URUZ</div><div className="sb-sub">Member Central</div></div>
           <div className="sb-nav">
             <div className="sb-section">Navigation</div>
-            {visibleNav.map(n=>(<button key={n.id} className={`sb-btn${page===n.id?" on":""}`} onClick={()=>setPage(n.id)}><span className="sb-icon">{n.icon}</span>{n.label}{n.id==="redemptions"&&pending>0&&<span style={{marginLeft:"auto",background:C.danger,color:"#fff",fontSize:10,fontWeight:800,padding:"1px 6px"}}>{pending}</span>}</button>))}
+            {visibleNav.map(n=>(
+              <button key={n.id} className={`sb-btn${page===n.id?" on":""}`} onClick={()=>setPage(n.id)}>
+                <span className="sb-icon">{n.icon}</span>
+                {n.label}
+                {n.id==="redemptions"&&pending>0&&<span style={{marginLeft:"auto",background:C.danger,color:"#fff",fontSize:10,fontWeight:800,padding:"1px 6px"}}>{pending}</span>}
+              </button>
+            ))}
           </div>
           <div className="sb-footer">
             <div className="sb-staff-name">{staffSession.name}</div>
@@ -333,14 +413,27 @@ export default function AdminPanel(){
             <button className="sb-logout" onClick={handleLogout}>Sign Out</button>
           </div>
         </div>
+
         <div className="main">
+          {/* ── DESKTOP TOPBAR ── */}
           <div className="topbar">
-            <div className="topbar-title">{ALL_NAV.find(n=>n.id===page)?.label}</div>
+            <div className="topbar-title">{currentLabel}</div>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:C.success}}/>
               <div className="topbar-date">{new Date().toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</div>
             </div>
           </div>
+
+          {/* ── MOBILE TOPBAR ── */}
+          <div className="mob-topbar">
+            <div className="mob-topbar-logo">URUZ</div>
+            <div className="mob-topbar-right">
+              <div className="mob-topbar-page">{currentLabel}</div>
+              <div className="mob-topbar-staff">{roleInfo?.icon} {staffSession.name}</div>
+            </div>
+          </div>
+
+          {/* ── CONTENT ── */}
           <div className="content" key={page}>
             {page==="dashboard"  &&<Dashboard members={members} transactions={transactions} redemptions={redemptions}/>}
             {page==="members"    &&<Members members={members} setMembers={setMembers} transactions={transactions} tiers={tiers} onAward={goAward} toast={showToast} role={role}/>}
@@ -358,6 +451,24 @@ export default function AdminPanel(){
             {page==="settings"   &&<Settings tiers={tiers} setTiers={setTiers} toast={showToast}/>}
           </div>
         </div>
+
+        {/* ── MOBILE BOTTOM NAV ── */}
+        <div className="mob-nav">
+          <div className="mob-nav-inner">
+            {visibleNav.map(n=>(
+              <button key={n.id} className={`mob-nav-btn${page===n.id?" on":""}`} onClick={()=>setPage(n.id)}>
+                {n.id==="redemptions"&&pending>0&&<div className="mob-nav-dot"/>}
+                <span className="mob-nav-icon">{n.emoji}</span>
+                <span className="mob-nav-lbl">{n.label}</span>
+              </button>
+            ))}
+            <button className="mob-nav-btn" onClick={handleLogout}>
+              <span className="mob-nav-icon">🚪</span>
+              <span className="mob-nav-lbl">Sign Out</span>
+            </button>
+          </div>
+        </div>
+
         <div className={`toast${toast.on?" on":""}`}>✓ {toast.msg}</div>
       </div>
     </>
