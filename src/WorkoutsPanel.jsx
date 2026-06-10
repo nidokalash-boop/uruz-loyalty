@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { getAllWorkouts, upsertWorkout, deleteWorkout, getPrograms, upsertProgram, deleteProgram } from "./supabase";
+import {
+  getAllWorkouts, upsertWorkout, deleteWorkout,
+  getPrograms, upsertProgram, deleteProgram,
+  getMembers, getMemberPrograms, assignProgramToMember, removeMemberProgram
+} from "./supabase";
 
 const C = {
   orange:"#F58020", cerulean:"#026F91", white:"#FFFDF3", black:"#1F2020",
@@ -10,22 +14,35 @@ const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat"];
 const DAYS_FULL = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 function genId(p){return `${p}-${Math.floor(10000+Math.random()*90000)}`;}
 function today(){return new Date().toISOString().slice(0,10);}
+function fmtDate(d){try{return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}catch{return d||"";}}
 
-export function WorkoutsPanel({ toast }) {
-  const [view, setView]       = useState("workouts"); // workouts | programs
-  const [workouts, setWorkouts] = useState([]);
-  const [programs, setPrograms] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [editing, setEditing]   = useState(null); // workout being edited
-  const [editingProg, setEditingProg] = useState(null); // program being edited
-  const [showForm, setShowForm] = useState(false);
+export function WorkoutsPanel({ members: propMembers, toast }) {
+  const [view, setView]             = useState("workouts"); // workouts | programs | assign
+  const [workouts, setWorkouts]     = useState([]);
+  const [programs, setPrograms]     = useState([]);
+  const [members, setMembers]       = useState(propMembers || []);
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [editing, setEditing]       = useState(null);
+  const [editingProg, setEditingProg] = useState(null);
+  const [showForm, setShowForm]     = useState(false);
   const [showProgForm, setShowProgForm] = useState(false);
 
   useEffect(() => {
-    Promise.all([getAllWorkouts(), getPrograms()]).then(([w, p]) => {
-      setWorkouts(w); setPrograms(p); setLoading(false);
-    });
+    Promise.all([getAllWorkouts(), getPrograms(), getMemberPrograms(), getMembers()])
+      .then(([w, p, a, m]) => {
+        setWorkouts(w);
+        setPrograms(p);
+        setAssignments(a);
+        if (!propMembers || propMembers.length === 0) setMembers(m);
+        setLoading(false);
+      });
   }, []);
+
+  // keep members in sync if passed from parent
+  useEffect(() => {
+    if (propMembers && propMembers.length > 0) setMembers(propMembers);
+  }, [propMembers]);
 
   // ── WORKOUT FORM ─────────────────────────────────────────
   const DEF_WORKOUT = {
@@ -38,10 +55,8 @@ export function WorkoutsPanel({ toast }) {
   const [newEx, setNewEx] = useState({name:"",sets:"",reps:"",weight:"",rest:"",notes:""});
 
   const openWorkoutForm = (w=null) => {
-    setWForm(w ? {
-      ...w,
-      exercises: Array.isArray(w.exercises) ? w.exercises : [],
-    } : {...DEF_WORKOUT, id:genId("WRK")});
+    setWForm(w ? { ...w, exercises: Array.isArray(w.exercises) ? w.exercises : [] }
+               : {...DEF_WORKOUT, id:genId("WRK")});
     setEditing(w?.id||null);
     setShowForm(true);
   };
@@ -78,10 +93,8 @@ export function WorkoutsPanel({ toast }) {
   const [pForm, setPForm] = useState(DEF_PROGRAM);
 
   const openProgramForm = (p=null) => {
-    setPForm(p ? {
-      ...p,
-      schedule: p.schedule || { Mon:[], Tue:[], Wed:[], Thu:[], Fri:[], Sat:[] },
-    } : {...DEF_PROGRAM, id:genId("PRG")});
+    setPForm(p ? { ...p, schedule: p.schedule || { Mon:[], Tue:[], Wed:[], Thu:[], Fri:[], Sat:[] } }
+               : {...DEF_PROGRAM, id:genId("PRG")});
     setEditingProg(p?.id||null);
     setShowProgForm(true);
   };
@@ -115,6 +128,48 @@ export function WorkoutsPanel({ toast }) {
       };
     });
   };
+
+  // ── ASSIGN PROGRAM ────────────────────────────────────────
+  const [assignMember, setAssignMember] = useState("");
+  const [assignProgram, setAssignProgram] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignSearch, setAssignSearch] = useState("");
+
+  const handleAssign = async () => {
+    if (!assignMember || !assignProgram) { toast("Select a member and a program"); return; }
+    const member = members.find(m => m.id === assignMember);
+    const program = programs.find(p => p.id === assignProgram);
+    if (!member || !program) return;
+    setAssigning(true);
+    const a = {
+      id: genId("MPA"),
+      memberId: member.id,
+      memberName: member.name || member.member_name,
+      programId: program.id,
+      programName: program.name,
+      assignedDate: today(),
+    };
+    await assignProgramToMember(a);
+    const updated = await getMemberPrograms();
+    setAssignments(updated);
+    setAssignMember("");
+    setAssignProgram("");
+    setAssigning(false);
+    toast(`${program.name} assigned to ${member.name || member.member_name}`);
+  };
+
+  const handleRemoveAssignment = async id => {
+    if (!window.confirm("Remove this program assignment?")) return;
+    await removeMemberProgram(id);
+    setAssignments(prev => prev.filter(a => a.id !== id));
+    toast("Assignment removed");
+  };
+
+  const normalName = m => m.name || m.member_name || "";
+  const filteredMembers = members
+    .filter(m => (m.status || "active") === "active")
+    .filter(m => assignSearch === "" || normalName(m).toLowerCase().includes(assignSearch.toLowerCase()))
+    .sort((a,b) => normalName(a).localeCompare(normalName(b)));
 
   if(loading) return <div style={{padding:20,color:C.muted,fontSize:13}}>Loading...</div>;
 
@@ -235,7 +290,6 @@ export function WorkoutsPanel({ toast }) {
         <textarea className="form-input" rows={2} value={pForm.description} onChange={e=>setPForm(f=>({...f,description:e.target.value}))} placeholder="Brief program description"/>
       </div>
 
-      {/* Weekly Schedule */}
       <div style={{background:C.surface,border:`1px solid ${C.border}`,padding:16,marginBottom:12}}>
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:2,color:C.white,marginBottom:4}}>Weekly Schedule</div>
         <div style={{fontSize:12,color:C.muted,marginBottom:16}}>Assign workouts to each day. Members will see today's workout on their home screen.</div>
@@ -277,35 +331,32 @@ export function WorkoutsPanel({ toast }) {
       <div className="sec-hdr">
         <div className="sec-title">Workouts</div>
         <div style={{display:"flex",gap:8}}>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setView(v=>v==="workouts"?"programs":"workouts")}>
-            {view==="workouts"?"📅 Programs":"💪 Workouts"}
-          </button>
-          <button className="btn btn-primary" onClick={()=>view==="workouts"?openWorkoutForm():openProgramForm()}>
-            + {view==="workouts"?"New Workout":"New Program"}
-          </button>
+          {view==="workouts"&&<button className="btn btn-primary" onClick={()=>openWorkoutForm()}>+ New Workout</button>}
+          {view==="programs"&&<button className="btn btn-primary" onClick={()=>openProgramForm()}>+ New Program</button>}
         </div>
       </div>
 
       {/* Sub-nav */}
       <div style={{display:"flex",gap:1,marginBottom:16,background:C.border}}>
-        {["workouts","programs"].map(v=>(
+        {["workouts","programs","assign"].map(v=>(
           <button key={v} onClick={()=>setView(v)} style={{
             flex:1,padding:"10px",background:view===v?C.surface:"#1F2020",
             border:"none",color:view===v?C.white:C.muted,fontFamily:"'Montserrat',sans-serif",
             fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",
-          }}>{v}</button>
+          }}>{v==="assign"?"Assign":v}</button>
         ))}
       </div>
 
-      {/* WORKOUTS LIST */}
+      {/* ── WORKOUTS LIST ── */}
       {view==="workouts"&&(
         workouts.length===0
           ? <div style={{padding:20,color:C.muted,fontSize:13}}>No workouts yet. Create your first one!</div>
           : workouts.map(w=>(
             <div key={w.id} style={{background:C.surface,border:`1px solid ${C.border}`,padding:14,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:52,height:52,background:C.card,flexShrink:0,overflow:"hidden"}}>
-                {w.thumbnail_url?<img src={w.thumbnail_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                :<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>💪</div>}
+                {w.thumbnail_url
+                  ? <img src={w.thumbnail_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>💪</div>}
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:700,color:w.active?C.white:C.muted}}>{w.title}</div>
@@ -320,27 +371,30 @@ export function WorkoutsPanel({ toast }) {
           ))
       )}
 
-      {/* PROGRAMS LIST */}
+      {/* ── PROGRAMS LIST ── */}
       {view==="programs"&&(
         programs.length===0
           ? <div style={{padding:20,color:C.muted,fontSize:13}}>No programs yet. Create your first weekly program!</div>
           : programs.map(p=>{
             const schedule = p.schedule||{};
             const totalAssigned = Object.values(schedule).flat().length;
+            const assignedCount = assignments.filter(a=>a.programId===p.id).length;
             return(
               <div key={p.id} style={{background:C.surface,border:`1px solid ${C.border}`,padding:14,marginBottom:8}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                   <div>
                     <div style={{fontSize:14,fontWeight:700,color:C.white}}>{p.name}</div>
                     {p.description&&<div style={{fontSize:11,color:C.muted,marginTop:2}}>{p.description}</div>}
-                    <div style={{fontSize:10,color:C.muted,marginTop:4}}>{totalAssigned} workout{totalAssigned!==1?"s":""} assigned</div>
+                    <div style={{fontSize:10,color:C.muted,marginTop:4,display:"flex",gap:12}}>
+                      <span>{totalAssigned} workout{totalAssigned!==1?"s":""} in schedule</span>
+                      {assignedCount>0&&<span style={{color:C.orange}}>{assignedCount} member{assignedCount!==1?"s":""} assigned</span>}
+                    </div>
                   </div>
                   <div style={{display:"flex",gap:6}}>
                     <button className="btn btn-ghost btn-sm" onClick={()=>openProgramForm(p)}>Edit</button>
                     <button className="btn btn-danger btn-sm" onClick={()=>removeProgram(p.id)}>Delete</button>
                   </div>
                 </div>
-                {/* Schedule preview */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:4}}>
                   {DAYS.map(day=>{
                     const assigned = (schedule[day]||[]);
@@ -358,6 +412,123 @@ export function WorkoutsPanel({ toast }) {
               </div>
             );
           })
+      )}
+
+      {/* ── ASSIGN VIEW ── */}
+      {view==="assign"&&(
+        <div>
+          {/* Assignment form */}
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,padding:20,marginBottom:20}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:2,color:C.white,marginBottom:16}}>Assign Program to Member</div>
+
+            {programs.length===0&&(
+              <div style={{fontSize:12,color:C.muted,marginBottom:12}}>No programs yet — create one in the Programs tab first.</div>
+            )}
+            {members.length===0&&(
+              <div style={{fontSize:12,color:C.muted,marginBottom:12}}>No members found.</div>
+            )}
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+              <div>
+                <label className="form-label">Member *</label>
+                <input
+                  className="form-input"
+                  placeholder="Search member…"
+                  value={assignSearch}
+                  onChange={e=>{ setAssignSearch(e.target.value); setAssignMember(""); }}
+                  style={{marginBottom:6}}
+                />
+                <select
+                  className="form-select"
+                  value={assignMember}
+                  onChange={e=>setAssignMember(e.target.value)}
+                  size={Math.min(6, filteredMembers.length+1)}
+                  style={{height:"auto"}}
+                >
+                  <option value="">— select member —</option>
+                  {filteredMembers.map(m=>(
+                    <option key={m.id} value={m.id}>{m.name||m.member_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Program *</label>
+                <select
+                  className="form-select"
+                  value={assignProgram}
+                  onChange={e=>setAssignProgram(e.target.value)}
+                  size={Math.min(6, programs.length+1)}
+                  style={{height:"auto"}}
+                >
+                  <option value="">— select program —</option>
+                  {programs.map(p=>(
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                {assignProgram&&(()=>{
+                  const p = programs.find(x=>x.id===assignProgram);
+                  if(!p) return null;
+                  const total = Object.values(p.schedule||{}).flat().length;
+                  return(
+                    <div style={{marginTop:8,fontSize:11,color:C.muted}}>
+                      {total} workout{total!==1?"s":""} in schedule
+                      {p.description&&<div style={{marginTop:2,fontStyle:"italic"}}>{p.description}</div>}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleAssign}
+              disabled={assigning||!assignMember||!assignProgram}
+            >
+              {assigning ? "Assigning…" : "Assign Program"}
+            </button>
+          </div>
+
+          {/* Current assignments */}
+          <div className="sec-hdr" style={{marginBottom:12}}>
+            <div className="sec-title">Current Assignments ({assignments.length})</div>
+          </div>
+
+          {assignments.length===0?(
+            <div style={{padding:20,color:C.muted,fontSize:13,border:`1px solid ${C.border}`}}>No programs assigned yet.</div>
+          ):(
+            <div className="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Program</th>
+                    <th>Assigned</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignments.map(a=>{
+                    const prog = programs.find(p=>p.id===a.programId);
+                    const total = prog ? Object.values(prog.schedule||{}).flat().length : 0;
+                    return(
+                      <tr key={a.id}>
+                        <td style={{fontWeight:600}}>{a.memberName}</td>
+                        <td>
+                          <div style={{fontWeight:600,color:C.white}}>{a.programName}</div>
+                          {total>0&&<div style={{fontSize:10,color:C.muted,marginTop:2}}>{total} workouts/week</div>}
+                        </td>
+                        <td style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:C.muted}}>{fmtDate(a.assignedDate)}</td>
+                        <td>
+                          <button className="btn btn-danger btn-sm" onClick={()=>handleRemoveAssignment(a.id)}>Remove</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
