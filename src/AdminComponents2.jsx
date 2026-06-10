@@ -357,7 +357,7 @@ function DisplaySettings({toast}){
   const updateTicker=(i,val)=>setSettings(s=>({...s,ticker:s.ticker.map((t,j)=>j===i?val:t)}));
   const addTicker=()=>setSettings(s=>({...s,ticker:[...s.ticker,""]}));
   const removeTicker=(i)=>setSettings(s=>({...s,ticker:s.ticker.filter((_,j)=>j!==i)}));
-  const updateChallenge=(i,field,val)=>setSettings(s=>({...s,challenges:s.challenges.map((c,j)=>j===i?{...c,[field]:field==="pts"?Number(val):val}:c)}));
+  const updateChallenge=(i,field,val)=>setSettings(s=>({...s,challenges:s.challenges.map((c,j)=>j===i?{...c,[field]:(field==="pts"||field==="join_pts"||field==="goal")?Number(val):val}:c)}));
   const toggleChallenge=(i)=>setSettings(s=>({...s,challenges:s.challenges.map((c,j)=>j===i?{...c,active:!c.active}:c)}));
 
   const SLIDE_LABELS={leaderboard:"🏆 Leaderboard",challenges:"⚔ Challenges",activity:"📍 Live Activity",spotlight:"★ Member Spotlight"};
@@ -384,7 +384,7 @@ function DisplaySettings({toast}){
     <div className="display-section">
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
         <div className="display-section-title" style={{marginBottom:0}}>Active Challenges</div>
-        <button className="btn btn-primary btn-sm" onClick={()=>setSettings(s=>({...s,challenges:[...s.challenges,{id:Date.now(),name:"New Challenge",desc:"Description here",pts:100,deadline:"7 days",icon:"⚡",active:true,goal:1}]}))}>+ Add</button>
+        <button className="btn btn-primary btn-sm" onClick={()=>setSettings(s=>({...s,challenges:[...s.challenges,{id:Date.now(),name:"New Challenge",desc:"Description here",pts:100,join_pts:10,deadline:"7 days",icon:"⚡",active:true,goal:1}]}))}>+ Add</button>
       </div>
       <div style={{fontSize:12,color:C.muted,marginBottom:14}}>These show on the challenges slide and member portal.</div>
       {settings.challenges.map((c,i)=>(
@@ -396,7 +396,12 @@ function DisplaySettings({toast}){
           <div className="ch-edit-row">
             <input className="form-input" placeholder="Challenge name" value={c.name} onChange={e=>updateChallenge(i,"name",e.target.value)}/>
             <input className="form-input" placeholder="Description" value={c.desc} onChange={e=>updateChallenge(i,"desc",e.target.value)}/>
-            <input className="form-input" type="number" placeholder="Pts" value={c.pts} onChange={e=>updateChallenge(i,"pts",e.target.value)} style={{width:80}}/>
+            <input className="form-input" type="number" placeholder="Win Pts" value={c.pts} onChange={e=>updateChallenge(i,"pts",e.target.value)} style={{width:80}}/>
+          </div>
+          <div style={{display:"flex",gap:10,marginTop:8,alignItems:"center"}}>
+            <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#6B6866",fontWeight:700,flexShrink:0}}>Join Reward</div>
+            <input className="form-input" type="number" placeholder="Join Pts" value={c.join_pts||0} onChange={e=>updateChallenge(i,"join_pts",e.target.value)} style={{width:100}}/>
+            <div style={{fontSize:11,color:"#6B6866"}}>pts awarded instantly when member joins</div>
           </div>
           <div style={{display:"flex",gap:10,marginTop:10}}>
             <input className="form-input" placeholder="Deadline (e.g. 3 days)" value={c.deadline} onChange={e=>updateChallenge(i,"deadline",e.target.value)}/>
