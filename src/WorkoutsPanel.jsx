@@ -48,7 +48,7 @@ export function WorkoutsPanel({ members: propMembers, toast }) {
   const DEF_WORKOUT = {
     id:"", title:"", description:"", category:"Strength", difficulty:"Beginner",
     duration_mins:45, thumbnail_url:"", video_url:"", pdf_url:"",
-    access_type:"free", points_cost:0, price_label:"", tier_required:"",
+    access_type:"free", points_cost:0, price_label:"", tier_required:"", private_note:"",
     exercises:[], active:true,
   };
   const [wForm, setWForm] = useState(DEF_WORKOUT);
@@ -213,6 +213,7 @@ export function WorkoutsPanel({ members: propMembers, toast }) {
             <option value="points">Points Unlock</option>
             <option value="paid">Paid</option>
             <option value="tier">Tier Required</option>
+            <option value="private">Private (Assigned Members Only)</option>
           </select>
         </div>
         {wForm.access_type==="points"&&<div>
@@ -433,23 +434,30 @@ export function WorkoutsPanel({ members: propMembers, toast }) {
                 <label className="form-label">Member *</label>
                 <input
                   className="form-input"
-                  placeholder="Search member…"
+                  placeholder="Search by name…"
                   value={assignSearch}
                   onChange={e=>{ setAssignSearch(e.target.value); setAssignMember(""); }}
-                  style={{marginBottom:6}}
+                  style={{marginBottom:8}}
                 />
                 <select
                   className="form-select"
                   value={assignMember}
                   onChange={e=>setAssignMember(e.target.value)}
-                  size={Math.min(6, filteredMembers.length+1)}
-                  style={{height:"auto"}}
                 >
                   <option value="">— select member —</option>
                   {filteredMembers.map(m=>(
                     <option key={m.id} value={m.id}>{m.name||m.member_name}</option>
                   ))}
                 </select>
+                {assignMember&&(()=>{
+                  const m = members.find(x=>x.id===assignMember);
+                  if(!m) return null;
+                  return(
+                    <div style={{marginTop:6,fontSize:11,color:C.success}}>
+                      ✓ {m.name||m.member_name} selected
+                    </div>
+                  );
+                })()}
               </div>
               <div>
                 <label className="form-label">Program *</label>
@@ -457,8 +465,6 @@ export function WorkoutsPanel({ members: propMembers, toast }) {
                   className="form-select"
                   value={assignProgram}
                   onChange={e=>setAssignProgram(e.target.value)}
-                  size={Math.min(6, programs.length+1)}
-                  style={{height:"auto"}}
                 >
                   <option value="">— select program —</option>
                   {programs.map(p=>(
@@ -470,8 +476,9 @@ export function WorkoutsPanel({ members: propMembers, toast }) {
                   if(!p) return null;
                   const total = Object.values(p.schedule||{}).flat().length;
                   return(
-                    <div style={{marginTop:8,fontSize:11,color:C.muted}}>
-                      {total} workout{total!==1?"s":""} in schedule
+                    <div style={{marginTop:6,fontSize:11,color:C.muted}}>
+                      <span style={{color:C.success}}>✓ {p.name} selected</span>
+                      <span style={{marginLeft:8}}>{total} workout{total!==1?"s":""}/week</span>
                       {p.description&&<div style={{marginTop:2,fontStyle:"italic"}}>{p.description}</div>}
                     </div>
                   );
