@@ -292,23 +292,26 @@ body,#root{background:#0A0A0A;color:#FFFDF3;font-family:'Montserrat',sans-serif;
 .rwd-btn.pending{background:#1A3A4A;color:#026F91;}
 
 /* ── CHALLENGES ── */
-.ch-item{background:#111;border-bottom:1px solid #1A1A1A;padding:14px 16px;animation:fadeUp .3s cubic-bezier(0.16,1,0.3,1) both;}
+.ch-item{background:#111;border-bottom:1px solid #1A1A1A;padding:16px 16px 14px;animation:fadeUp .3s cubic-bezier(0.16,1,0.3,1) both;}
 .ch-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
-.ch-icon{width:36px;height:36px;background:#161616;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.ch-icon svg{width:15px;height:15px;stroke:#F58020;stroke-width:1.5;fill:none;}
-.ch-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:#FFFDF3;line-height:1;margin-bottom:3px;}
-.ch-desc{font-size:11px;color:#9A9690;font-weight:400;}
-.ch-badge{padding:2px 8px;font-size:8px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-left:auto;flex-shrink:0;}
-.ch-badge.joined{background:rgba(245,128,32,.1);color:#F58020;}
-.ch-badge.avail{border:1px solid #222;color:#4A4845;cursor:pointer;transition:all .15s;}
-.ch-badge.avail:hover{border-color:#F58020;color:#F58020;}
-.ch-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
-.ch-dl{font-size:9px;color:#8A8784;display:flex;align-items:center;gap:5px;font-weight:500;}
-.ch-dl svg{width:10px;height:10px;stroke:currentColor;stroke-width:2;fill:none;}
-.ch-pts{font-family:'Bebas Neue',sans-serif;font-size:17px;color:#F58020;}
-.ch-bar{height:1px;background:#1A1A1A;}
-.ch-bar-fill{height:100%;background:#F58020;transition:width 1s cubic-bezier(0.16,1,0.3,1);}
-.ch-bar-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:9px;color:#4A4845;font-weight:300;}
+.ch-icon{width:40px;height:40px;background:#161616;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ch-icon svg{width:16px;height:16px;stroke:#F58020;stroke-width:1.5;fill:none;}
+.ch-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:#FFFDF3;line-height:1;margin-bottom:4px;}
+.ch-desc{font-size:12px;color:#9A9690;font-weight:400;line-height:1.5;}
+.ch-badge{padding:3px 10px;font-size:8px;letter-spacing:2px;text-transform:uppercase;font-weight:700;flex-shrink:0;}
+.ch-badge.joined{background:rgba(245,128,32,.1);color:#F58020;border:1px solid rgba(245,128,32,.2);}
+.ch-badge.done{background:rgba(45,155,90,.1);color:#2D9B5A;border:1px solid rgba(45,155,90,.2);}
+.ch-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.ch-dl{font-size:10px;color:#8A8784;display:flex;align-items:center;gap:5px;font-weight:500;}
+.ch-dl svg{width:11px;height:11px;stroke:currentColor;stroke-width:2;fill:none;}
+.ch-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#F58020;}
+.ch-bar{height:2px;background:#1A1A1A;border-radius:1px;}
+.ch-bar-fill{height:100%;background:#F58020;border-radius:1px;transition:width 1s cubic-bezier(0.16,1,0.3,1);}
+.ch-bar-labels{display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:#4A4845;font-weight:400;}
+.ch-join-btn{width:100%;margin-top:12px;padding:13px;background:#F58020;border:none;color:#fff;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;cursor:pointer;transition:background .15s;}
+.ch-join-btn:hover{background:#E07318;}
+.ch-join-btn:active{background:#CC6A10;}
+.ch-join-btn:disabled{background:#1C1C1C;color:#4A4845;cursor:not-allowed;letter-spacing:2px;}
 
 /* ── EARN ── */
 .earn-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #1A1A1A;background:#111;}
@@ -602,18 +605,15 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
 
   return(
     <div className="tab-content">
-      {/* Hero */}
       <div className="hero">
         <div className="hero-greeting">Good {new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}</div>
         <div className="hero-name">{member.name.split(" ")[0].toUpperCase()}</div>
         <div className="hero-meta">{member.id} · since {new Date(member.joinDate).toLocaleDateString("en-GB",{month:"short",year:"numeric"})}</div>
-        {/* Rings */}
         <div className="rings-row">
           <Ring value={Math.min(rank,10)} max={10} size={68} stroke={4} color="#666" label={`#${rank}`} sublabel="rank"/>
           <Ring value={member.points} max={next?next.min:member.points||1} size={92} stroke={5} color="#F58020" label={member.points.toLocaleString()} sublabel="points"/>
           <Ring value={Math.min(member.streak,30)} max={30} size={68} stroke={4} color="#C9A84C" label={member.streak} sublabel="streak"/>
         </div>
-        {/* Tier progress */}
         {next&&(
           <div className="tier-strip">
             <div className="tier-dot" style={{background:tier.color}}/>
@@ -624,7 +624,6 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
         )}
       </div>
 
-      {/* Quick Actions */}
       <div className="qa-grid">
         <div className="qa-item" onClick={()=>window.open("/checkin","_blank")}>
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
@@ -640,7 +639,6 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
         </div>
       </div>
 
-      {/* Motivation / Birthday */}
       {isBirthday?(
         <div style={{padding:"16px",background:"#111",borderLeft:"1px solid #C9A84C",borderBottom:"1px solid #1A1A1A"}}>
           <div style={{fontSize:9,letterSpacing:3,textTransform:"uppercase",color:"#C9A84C",fontWeight:700,marginBottom:5}}>Happy Birthday</div>
@@ -653,7 +651,6 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
         </div>
       )}
 
-      {/* Active Challenges */}
       {myEnrollments.length>0&&(
         <div className="block">
           <div className="block-header">
@@ -681,7 +678,6 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
         </div>
       )}
 
-      {/* Today's Program */}
       {todayWorkouts.length>0&&(
         <div className="block">
           <div className="block-header">
@@ -701,7 +697,6 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
         </div>
       )}
 
-      {/* New Workouts */}
       {newWorkouts.length>0&&todayWorkouts.length===0&&(
         <div className="block">
           <div className="block-header">
@@ -718,7 +713,6 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
         </div>
       )}
 
-      {/* Recent Activity */}
       <div className="block">
         <div className="block-header">
           <span className="block-title">Recent Activity</span>
@@ -776,7 +770,6 @@ function WorkoutLogModal({ workout, member, onClose, onSaved }) {
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.9)",zIndex:400,display:"flex",flexDirection:"column",animation:"fadeIn .2s ease"}}>
       <div style={{background:"#111",flex:1,display:"flex",flexDirection:"column",maxHeight:"100vh"}}>
-        {/* Header */}
         <div style={{padding:"14px 16px",borderBottom:"1px solid #1A1A1A",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:2,color:"#FFFDF3"}}>Log Workout</div>
@@ -786,7 +779,6 @@ function WorkoutLogModal({ workout, member, onClose, onSaved }) {
         </div>
 
         <div style={{flex:1,overflowY:"auto",padding:"16px"}}>
-          {/* Past performance */}
           {pastLogs.length>0&&(
             <div style={{marginBottom:16,background:"#0A0A0A",border:"1px solid #1A1A1A",padding:12}}>
               <div style={{fontSize:8,letterSpacing:3,textTransform:"uppercase",color:"#7A7774",fontWeight:700,marginBottom:8}}>Previous Sessions</div>
@@ -803,7 +795,6 @@ function WorkoutLogModal({ workout, member, onClose, onSaved }) {
             </div>
           )}
 
-          {/* Log each exercise */}
           {exercises.length===0&&(
             <div style={{fontSize:12,color:"#7A7774",textAlign:"center",padding:"20px 0"}}>No exercises defined for this workout.</div>
           )}
@@ -829,7 +820,6 @@ function WorkoutLogModal({ workout, member, onClose, onSaved }) {
           ))}
         </div>
 
-        {/* Save button */}
         <div style={{padding:"12px 16px",borderTop:"1px solid #1A1A1A",flexShrink:0}}>
           <button onClick={handleSave} disabled={saving} style={{
             width:"100%",padding:14,background:"#F58020",border:"none",color:"#fff",
@@ -866,7 +856,6 @@ function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
   },[member.id]);
   useEffect(()=>{ if(propWorkouts?.length) setWorkouts(propWorkouts); },[propWorkouts]);
 
-  const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat"];
   const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const todayDay=dayNames[new Date().getDay()];
   const programWorkoutIds=dayFilter==="All"
@@ -1033,6 +1022,7 @@ function ChallengesTab({member,challenges}){
   const active=challenges.filter(c=>{const e=isEnrolled(c.id);return e&&!e.completed;});
   const available=challenges.filter(c=>!isEnrolled(c.id));
   const completed=challenges.filter(c=>{const e=isEnrolled(c.id);return e&&e.completed;});
+
   const ChItem=({c,idx})=>{
     const enrolled=isEnrolled(c.id);
     const progress=enrolled?enrolled.progress:0;
@@ -1042,18 +1032,42 @@ function ChallengesTab({member,challenges}){
     return(
       <div className="ch-item" style={{animationDelay:`${idx*0.06}s`}}>
         <div className="ch-row">
-          <div className="ch-icon"><IconSVG id={c.id_icon||c.icon||"trophy"} size={15} color="#F58020"/></div>
-          <div style={{flex:1}}><div className="ch-title">{c.name}</div><div className="ch-desc">{c.desc}</div></div>
-          {done?<div className="ch-badge joined">Done</div>:enrolled?<div className="ch-badge joined">Joined</div>:<div className="ch-badge avail" onClick={()=>handleJoin(c)}>{joining===c.id?"...":"Join"}</div>}
+          <div className="ch-icon">
+            <IconSVG id={c.id_icon||c.icon||"trophy"} size={16} color="#F58020"/>
+          </div>
+          <div style={{flex:1}}>
+            <div className="ch-title">{c.name}</div>
+            <div className="ch-desc">{c.desc}</div>
+          </div>
+          {done && <div className="ch-badge done">✓ Done</div>}
+          {!done && enrolled && <div className="ch-badge joined">Joined</div>}
         </div>
         <div className="ch-meta">
-          <div className="ch-dl"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>{c.deadline}</div>
+          <div className="ch-dl">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            {c.deadline}
+          </div>
           <div className="ch-pts">+{c.pts} PTS</div>
         </div>
-        {enrolled&&!done&&<><div className="ch-bar"><div className="ch-bar-fill" style={{width:`${pct}%`}}/></div><div className="ch-bar-labels"><span>{progress}/{goal}</span><span>{pct}%</span></div></>}
+        {enrolled && !done && (
+          <>
+            <div className="ch-bar"><div className="ch-bar-fill" style={{width:`${pct}%`}}/></div>
+            <div className="ch-bar-labels"><span>{progress}/{goal}</span><span>{pct}%</span></div>
+          </>
+        )}
+        {!enrolled && !done && (
+          <button
+            className="ch-join-btn"
+            onClick={()=>handleJoin(c)}
+            disabled={joining===c.id}
+          >
+            {joining===c.id ? "Joining…" : "Join Challenge"}
+          </button>
+        )}
       </div>
     );
   };
+
   return(
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 56px)"}}>
       <div style={{padding:"14px 16px 10px",background:"#0A0A0A",borderBottom:"1px solid #1A1A1A",flexShrink:0}}>
@@ -1224,7 +1238,6 @@ function ProfileTab({member,tiers,onLogout,onRefresh}){
   );
 }
 
-
 // ── RANKINGS OVERLAY ─────────────────────────────────────
 function RankingsOverlay({ members, memberId, tiers, onClose }) {
   const sorted = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points);
@@ -1234,7 +1247,6 @@ function RankingsOverlay({ members, memberId, tiers, onClose }) {
       display:"flex",flexDirection:"column",
       animation:"fadeUp .3s cubic-bezier(0.16,1,0.3,1) both",
     }}>
-      {/* Header */}
       <div style={{
         height:48,background:"#0A0A0A",borderBottom:"1px solid #1A1A1A",
         display:"flex",alignItems:"center",justifyContent:"space-between",
@@ -1243,12 +1255,10 @@ function RankingsOverlay({ members, memberId, tiers, onClose }) {
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:3,color:"#C8C4BE"}}>Rankings</div>
         <button onClick={onClose} style={{background:"none",border:"none",color:"#7A7774",fontSize:11,letterSpacing:2,textTransform:"uppercase",fontWeight:700,cursor:"pointer",fontFamily:"'Montserrat',sans-serif"}}>Close</button>
       </div>
-      {/* List */}
       <div style={{flex:1,overflowY:"auto"}}>
         {sorted.map((m,i)=>{
           const rank=i+1;
           const isMe=m.id===memberId;
-          const tier=tiers?[...tiers].sort((a,b)=>b.min-a.min).find(t=>m.points>=(t.min_pts||t.min||0)):null;
           const rankColor=rank===1?"#C9A84C":rank===2?"#888":rank===3?"#8B6534":"#555";
           return(
             <div key={m.id} style={{
@@ -1354,7 +1364,6 @@ export default function MemberCentral(){
     if(session?.memberId){setMemberId(session.memberId);loadData(session.memberId);}
   },[]);
 
-  // Back button handler
   useEffect(()=>{
     const handlePop=()=>{setTab(prev=>{if(prev==="home"){window.history.pushState(null,"",window.location.href);return prev;}return "home";});};
     window.history.pushState(null,"",window.location.href);
