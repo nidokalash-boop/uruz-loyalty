@@ -6,7 +6,8 @@ import {
   getMemberEnrollments, enrollInChallenge, getDisplaySettings,
   getEarnRules, addReferral, getMemberByReferralCode,
   getWorkouts, getMemberUnlocks, unlockWorkout,
-  getWorkoutLogs, saveWorkoutLog, getPrograms
+  getWorkoutLogs, saveWorkoutLog, getPrograms,
+  getMemberProgramsByMember
 } from "./supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@200;300;400;500;600;700;800&display=swap');`;
@@ -833,7 +834,7 @@ function WorkoutLogModal({ workout, member, onClose, onSaved }) {
 }
 
 // ── WORKOUTS TAB ─────────────────────────────────────────
-function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
+function WorkoutsTab({member,tiers,workouts:propWorkouts,programs,assignedWorkoutIds=[]}){
   const [workouts,setWorkouts]=useState(propWorkouts||[]);
   const [unlocks,setUnlocks]=useState([]);
   const [loaded,setLoaded]=useState(false);
@@ -866,6 +867,7 @@ function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
   const tierOrder=["Iron","Bronze","Silver","Gold","Elite"];
   const canAccess=w=>{
     if(w.access_type==="free") return true;
+    if(w.access_type==="private") return assignedWorkoutIds.includes(w.id);
     if((w.access_type==="points"||w.access_type==="paid")&&isUnlocked(w.id)) return true;
     if(w.access_type==="tier"){const ri=tierOrder.indexOf(w.tier_required);const mi=tierOrder.indexOf(memberTier.name);return mi>=ri;}
     return false;
@@ -884,6 +886,8 @@ function WorkoutsTab({member,tiers,workouts:propWorkouts,programs}){
   const filtered=workouts.filter(w=>{
     if(catFilter!=="All"&&w.category!==catFilter) return false;
     if(programWorkoutIds!==null&&!programWorkoutIds.includes(w.id)) return false;
+    // hide private workouts the member isn't assigned to
+    if(w.access_type==="private"&&!assignedWorkoutIds.includes(w.id)) return false;
     return true;
   });
   if(!loaded) return <div style={{padding:20,fontSize:12,color:"#4A4845",fontWeight:300}}>Loading…</div>;
@@ -1314,6 +1318,7 @@ export default function MemberCentral(){
   const [enrollments,setEnrollments] = useState([]);
   const [workouts,setWorkouts]       = useState([]);
   const [programs,setPrograms]       = useState([]);
+  const [assignedWorkoutIds,setAssignedWorkoutIds] = useState([]);
   const [homeMessages,setHomeMsgs]   = useState(URUZ_QUOTES);
   const [tab,setTab]                 = useState("home");
   const [showRankings,setShowRankings] = useState(false);
@@ -1334,6 +1339,18 @@ export default function MemberCentral(){
     if(er&&er.length>0) setEarnRules(er.filter(x=>x.active));
     if(wk?.length) setWorkouts(wk);
     try { const pg=await getPrograms(); if(pg?.length) setPrograms(pg); } catch{}
+    // load member's assigned programs to determine private workout access
+    try {
+      const memberAssignments = await getMemberProgramsByMember(mid);
+      const pg = await getPrograms();
+      if(pg?.length) setPrograms(pg);
+      const wkIds = memberAssignments.flatMap(a => {
+        const prog = pg.find(p => p.id === a.programId);
+        if(!prog) return [];
+        return Object.values(prog.schedule || {}).flat();
+      });
+      setAssignedWorkoutIds([...new Set(wkIds)]);
+    } catch { setAssignedWorkoutIds([]); }
     if(ds){try{const cfg=JSON.parse(ds.config||"{}");if(cfg.challenges?.length)setChallenges(cfg.challenges.filter(c=>c.active!==false));if(cfg.homeMessages?.length)setHomeMsgs(cfg.homeMessages);}catch{}}
     const found=normalized.find(x=>x.id===mid);
     setMember(found||null);setLoaded(true);
@@ -1397,7 +1414,7 @@ export default function MemberCentral(){
         </div>
         <div key={tab}>
           {tab==="home"       &&<HomeTab member={member} members={members} transactions={transactions} tiers={tiers} challenges={challenges} enrollments={enrollments} workouts={workouts} programs={programs} homeMessages={homeMessages} onTabChange={setTab} onShowRankings={()=>setShowRankings(true)}/>}
-          {tab==="workouts"   &&<WorkoutsTab member={member} tiers={tiers} workouts={workouts} programs={programs}/>}
+          {tab==="workouts"   &&<WorkoutsTab member={member} tiers={tiers} workouts={workouts} programs={programs} assignedWorkoutIds={assignedWorkoutIds}/>}
           {tab==="challenges" &&<ChallengesTab member={member} challenges={challenges}/>}
           {tab==="loyalty"    &&<LoyaltyTab member={member} members={members} transactions={transactions} redemptions={redemptions} rewards={rewards} tiers={tiers} earnRules={earnRules} memberId={member.id} onRequest={handleRequest}/>}
           {tab==="profile"    &&<ProfileTab member={member} tiers={tiers} onLogout={handleLogout} onRefresh={()=>loadData()}/>}
