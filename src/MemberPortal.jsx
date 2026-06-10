@@ -1021,7 +1021,16 @@ function ChallengesTab({member,challenges}){
     const enrollment={id:genId("ENR"),challengeId:String(c.id),challengeName:c.name,memberId:member.id,memberName:member.name,progress:0,goal:c.goal||1,enrolledDate:today()};
     await enrollInChallenge(enrollment);
     setEnrollments(prev=>[...prev,{...enrollment,completed:false}]);
-    setJoining(null);showToast(`Joined: ${c.name}`);
+    // award join points instantly if configured
+    const joinPts = Number(c.join_pts||0);
+    if(joinPts>0){
+      const newPoints = member.points + joinPts;
+      await upsertMember({...member, points:newPoints});
+      const txn = {id:genId("TXN"),memberId:member.id,memberName:member.name,type:"challenge",pts:joinPts,note:`Joined: ${c.name}`,date:today()};
+      await addTransaction(txn);
+    }
+    setJoining(null);
+    showToast(joinPts>0?`Joined ${c.name} — +${joinPts} pts awarded!`:`Joined: ${c.name}`);
   };
   const active=challenges.filter(c=>{const e=isEnrolled(c.id);return e&&!e.completed;});
   const available=challenges.filter(c=>!isEnrolled(c.id));
@@ -1051,7 +1060,10 @@ function ChallengesTab({member,challenges}){
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
             {c.deadline}
           </div>
-          <div className="ch-pts">+{c.pts} PTS</div>
+          <div style={{textAlign:"right"}}>
+            <div className="ch-pts">+{c.pts} PTS</div>
+            {Number(c.join_pts||0)>0&&<div style={{fontSize:9,color:"#2D9B5A",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginTop:2}}>+{c.join_pts} for joining</div>}
+          </div>
         </div>
         {enrolled && !done && (
           <>
