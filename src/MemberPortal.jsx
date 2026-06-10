@@ -582,7 +582,7 @@ function HomeTab({member,members,transactions,tiers,challenges,enrollments,worko
   const next=getNext(member.points,tiers);
   const tierPct=next?Math.round(((member.points-tier.min)/(next.min-tier.min))*100):100;
   const rank=[...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).findIndex(m=>m.id===member.id)+1;
-  const myTxns=transactions.filter(t=>t.memberId===member.id||t.member_id===member.id).slice(0,3);
+  const myTxns=transactions.filter(t=>t.memberId===member.id||t.member_id===member.id).slice(0,10);
   const myEnrollments=enrollments.filter(e=>(e.memberId===member.id||e.member_id===member.id)&&!e.completed);
   const msgs=homeMessages&&homeMessages.length>0?homeMessages:URUZ_QUOTES;
   const todayMMDD=new Date().toISOString().slice(5,10);
