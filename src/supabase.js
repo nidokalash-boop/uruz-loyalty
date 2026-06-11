@@ -343,3 +343,65 @@ export async function assignProgramToMember(assignment) {
 export async function removeMemberProgram(id) {
   await supabase.from('member_programs').delete().eq('id', id)
 }
+
+// ── POINTS LOG ───────────────────────────────────────────
+export async function getPointsLog({ memberId, limit = 100 } = {}) {
+  let q = supabase.from('points_log').select('*').order('created_at', { ascending: false }).limit(limit)
+  if (memberId) q = q.eq('member_id', memberId)
+  const { data } = await q
+  return (data || []).map(r => ({
+    ...r,
+    memberId:   r.member_id,
+    memberName: r.member_name,
+    createdBy:  r.created_by,
+    createdAt:  r.created_at,
+  }))
+}
+
+// Award points to a single member and log it
+export async function awardPoints({ memberId, memberName, points, reason, category = 'manual', createdBy = 'staff' }) {
+  const id = `PL-${Date.now()}-${Math.random().toString(36).slice(2,7)}`
+  await supabase.from('points_log').insert({
+    id,
+    member_id:   memberId,
+    member_name: memberName,
+    points,
+    reason,
+    category,
+    created_by:  createdBy,
+  })
+  // Update member balance
+  const { data: member } = await supabase.from('members').select('points').eq('id', memberId).single()
+  const newTotal = (member?.points || 0) + points
+  await supabase.from('members').update({ points: newTotal }).eq('id', memberId)
+  return newTotal
+}
+
+// Batch award points to multiple members (campaign use)
+export async function batchAwardPoints({ memberIds, memberMap, points, reason, category = 'campaign', createdBy = 'staff' }) {
+  const rows = memberIds.map(memberId => ({
+    id:          `PL-${Date.now()}-${Math.random().toString(36).slice(2,7)}-${memberId.slice(-4)}`,
+    member_id:   memberId,
+    member_name: memberMap[memberId] || '',
+    points,
+    reason,
+    category,
+    created_by:  createdBy,
+  }))
+
+  // Insert all log rows
+  await supabase.from('points_log').insert(rows)
+
+  // Update each member's points balance
+  for (const memberId of memberIds) {
+    const { data: member } = await supabase.from('members').select('points').eq('id', memberId).single()
+    const newTotal = (member?.points || 0) + points
+    await supabase.from('members').update({ points: newTotal }).eq('id', memberId)
+  }
+}
+
+// Get total points earned by a member (sum of log)
+export async function getMemberPointsTotal(memberId) {
+  const { data } = await supabase.from('points_log').select('points').eq('member_id', memberId)
+  return (data || []).reduce((sum, r) => sum + r.points, 0)
+}
