@@ -16,6 +16,7 @@ import {
 import { PinInput, Modal, AdminLogin, Dashboard, Members, AwardPoints, Redemptions, RewardsCatalog, StaffManagement, BulkImport } from "./AdminComponents1";
 import { DisplaySettings, Settings, ChallengesPanel, EarnRules, ExportData, ReferralsPanel } from "./AdminComponents2";
 import { WorkoutsPanel } from "./WorkoutsPanel";
+import { PointsPanel } from "./PointsPanel";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');`;
 
@@ -39,7 +40,7 @@ const DEF_REWARDS = [
   { id:"RWD-003", name:"1-Month Locker Rental",  pts:750,  cat:"Access",   icon:"🔐", stock:true  },
   { id:"RWD-004", name:"URUZ Premium Tee",       pts:900,  cat:"Merch",    icon:"👕", stock:true  },
   { id:"RWD-005", name:"Free Personal Training", pts:1500, cat:"Training", icon:"🏋", stock:true  },
-  { id:"RWD-006", name:"1-Month Membership",     pts:3000, cat:"Access",   icon:"⚡", stock:true  },
+  { id:"RWD-006", name:"1-Month Membership",     pts:4500, cat:"Access",   icon:"⚡", stock:true  },
   { id:"RWD-007", name:"URUZ Hoodie",            pts:1200, cat:"Merch",    icon:"🧥", stock:false },
   { id:"RWD-008", name:"Nutrition Consult",      pts:800,  cat:"Training", icon:"🥗", stock:true  },
 ];
@@ -52,8 +53,8 @@ const ROLES = {
 };
 
 const PERMISSIONS = {
-  owner:      ["dashboard","members","award","redemptions","rewards","staff","display","workouts","challenges","earn","referrals","export","import","settings"],
-  manager:    ["dashboard","members","award","redemptions","rewards","display","workouts","challenges","earn","referrals","export","import"],
+  owner:      ["dashboard","members","award","points","redemptions","rewards","staff","display","workouts","challenges","earn","referrals","export","import","settings"],
+  manager:    ["dashboard","members","award","points","redemptions","rewards","display","workouts","challenges","earn","referrals","export","import"],
   front_desk: ["dashboard","members","award","redemptions"],
   trainer:    ["dashboard","members","award"],
 };
@@ -312,6 +313,7 @@ const ALL_NAV=[
   {id:"dashboard",  icon:"◉", label:"Dashboard",  emoji:"◉"},
   {id:"members",    icon:"⊞", label:"Members",     emoji:"👥"},
   {id:"award",      icon:"◆", label:"Award",       emoji:"◆"},
+  {id:"points",     icon:"✦", label:"Points",      emoji:"✦"},
   {id:"redemptions",icon:"🎟", label:"Redeem",      emoji:"🎟"},
   {id:"rewards",    icon:"⭐", label:"Rewards",     emoji:"⭐"},
   {id:"staff",      icon:"👥", label:"Staff",       emoji:"🔑"},
@@ -425,6 +427,7 @@ export default function AdminPanel(){
             {page==="dashboard"  &&<Dashboard members={members} transactions={transactions} redemptions={redemptions}/>}
             {page==="members"    &&<Members members={members} setMembers={setMembers} transactions={transactions} tiers={tiers} onAward={goAward} toast={showToast} role={role}/>}
             {page==="award"      &&<AwardPoints members={members} setMembers={setMembers} setTransactions={setTxns} preSelected={awardTarget} toast={showToast}/>}
+            {page==="points"     &&<PointsPanel members={members} toast={showToast}/>}
             {page==="redemptions"&&<Redemptions redemptions={redemptions} setRedemptions={setRdms} setMembers={setMembers} setTransactions={setTxns} toast={showToast}/>}
             {page==="rewards"    &&<RewardsCatalog rewards={rewards} setRewards={setRewards} toast={showToast}/>}
             {page==="staff"      &&<StaffManagement staffList={staffList} setStaffList={setStaffList} toast={showToast}/>}
