@@ -221,6 +221,7 @@ tr.clickable:hover td{background:rgba(245,128,32,.04);cursor:pointer;}
 .badge-pending{background:rgba(245,166,35,.15);color:#F5A623;}
 .badge-fulfilled{background:rgba(34,197,94,.15);color:#22C55E;}
 .badge-cancelled{background:rgba(107,104,102,.2);color:#6B6866;}
+.badge-archived{background:rgba(107,104,102,.2);color:#6B6866;}
 .search-row{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
 .search-input{flex:1;min-width:180px;padding:9px 14px;background:#252627;border:1px solid #333435;color:#FFFDF3;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:500;outline:none;transition:border-color .15s;}
 .search-input::placeholder{color:#6B6866;}
@@ -493,7 +494,6 @@ function Dashboard({members, transactions, redemptions}) {
   const active      = members.filter(m=>m.status==="active").length;
   const totalPts    = members.reduce((s,m)=>s+m.points,0);
 
-  // filtered by period
   const filteredTxns = transactions.filter(t=>inRange(t.date,from,to));
   const filteredRdms = redemptions.filter(r=>inRange(r.date,from,to));
   const newMembers   = members.filter(m=>inRange(m.joinDate||m.join_date,from,to));
@@ -513,17 +513,14 @@ function Dashboard({members, transactions, redemptions}) {
     challenge:{label:"Challenge", color:C.cerulean},
   };
 
-  // top members by points
   const topMembers = [...members].filter(m=>m.status==="active").sort((a,b)=>b.points-a.points).slice(0,5);
 
-  // activity breakdown for period
   const typeBreakdown = Object.entries(
     filteredTxns.reduce((acc,t)=>{ const k=t.type||"manual"; acc[k]=(acc[k]||0)+(t.pts>0?t.pts:0); return acc; },{})
   ).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
   return (
     <div>
-      {/* Period filter */}
       <div className="period-bar">
         {PERIODS.map(p=>(
           <button key={p.id} className={`period-btn${period===p.id?" on":""}`} onClick={()=>setPeriod(p.id)}>
@@ -532,7 +529,6 @@ function Dashboard({members, transactions, redemptions}) {
         ))}
       </div>
 
-      {/* Stats */}
       <div className="stat-grid">
         <div className="stat-card" style={{"--accent":C.orange}}>
           <div className="stat-val">{active}</div>
@@ -556,9 +552,7 @@ function Dashboard({members, transactions, redemptions}) {
         </div>
       </div>
 
-      {/* Two column section */}
       <div className="dash-grid">
-        {/* Top members */}
         <div className="dash-card">
           <div className="dash-card-title">Top Members by Points</div>
           {topMembers.map((m,i)=>(
@@ -575,7 +569,6 @@ function Dashboard({members, transactions, redemptions}) {
           {topMembers.length===0&&<div style={{color:C.muted,fontSize:12}}>No members yet.</div>}
         </div>
 
-        {/* Activity breakdown */}
         <div className="dash-card">
           <div className="dash-card-title">Points by Activity — {PERIODS.find(p=>p.id===period)?.label}</div>
           {typeBreakdown.length===0?(
@@ -599,7 +592,6 @@ function Dashboard({members, transactions, redemptions}) {
         </div>
       </div>
 
-      {/* Recent transactions */}
       <div className="sec-hdr">
         <div className="sec-title">Transactions — {PERIODS.find(p=>p.id===period)?.label}</div>
         <div style={{fontSize:12,color:C.muted,fontWeight:500}}>{filteredTxns.length} total</div>
@@ -631,7 +623,6 @@ function Dashboard({members, transactions, redemptions}) {
         </div>
       )}
 
-      {/* Mobile transaction cards */}
       <div className="member-list-mobile">
         {filteredTxns.slice(0,20).map(t=>{
           const cfg=TYPE_CFG[t.type]||{label:t.type,color:C.muted};
@@ -656,47 +647,80 @@ function Dashboard({members, transactions, redemptions}) {
 
 // ── MEMBERS ───────────────────────────────────────────────
 function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
-  const [search,setSearch]   = useState("");
-  const [showAdd,setShowAdd] = useState(false);
-  const [selected,setSelected] = useState(null);
-  const [form,setForm]       = useState({name:"",phone:"",email:"",status:"active",birthday:""});
-  const [saving,setSaving]   = useState(false);
-  const canAdd = canAccess(role,"members")&&role!=="trainer";
-  const filtered = members.filter(m=>
-    m.name.toLowerCase().includes(search.toLowerCase())||
-    m.phone.includes(search)||m.id.includes(search)
-  );
+  const [search,setSearch]         = useState("");
+  const [showAdd,setShowAdd]       = useState(false);
+  const [selected,setSelected]     = useState(null);
+  const [confirmArchive,setConfirmArchive] = useState(false);
+  const [archiving,setArchiving]   = useState(false);
+  const [showArchived,setShowArchived] = useState(false);
+  const [form,setForm]             = useState({name:"",phone:"",email:"",status:"active",birthday:""});
+  const [saving,setSaving]         = useState(false);
+  const canAdd     = canAccess(role,"members") && role !== "trainer";
+  const canArchive = role === "owner" || role === "manager";
 
-  const handleAdd=async()=>{
+  const filtered = members.filter(m=>{
+    const matchSearch = m.name.toLowerCase().includes(search.toLowerCase())||
+      m.phone.includes(search)||m.id.includes(search);
+    const matchArchive = showArchived ? true : m.status !== "archived";
+    return matchSearch && matchArchive;
+  });
+
+  const archivedCount = members.filter(m=>m.status==="archived").length;
+
+  const handleAdd = async () => {
     if(!form.name.trim()||!form.phone.trim()) return;
     setSaving(true);
     const nm={...form,id:genId("URZ"),joinDate:today(),points:0,checkins:0,streak:0,pin:null,lastCheckin:null};
     await upsertMember(nm);
     setMembers(prev=>[...prev,normalizeMember(nm)]);
-    setShowAdd(false);setForm({name:"",phone:"",email:"",status:"active",birthday:""});setSaving(false);
+    setShowAdd(false); setForm({name:"",phone:"",email:"",status:"active",birthday:""}); setSaving(false);
     toast("Member added");
   };
 
-  const toggleStatus=async(id,current)=>{
-    const ns=current==="active"?"inactive":"active";
-    await updateMemberStatus(id,ns);
+  const toggleStatus = async (id, current) => {
+    const ns = current==="active" ? "inactive" : "active";
+    await updateMemberStatus(id, ns);
     setMembers(prev=>prev.map(m=>m.id===id?{...m,status:ns}:m));
     toast("Status updated");
   };
 
-  const handleResetPin=async(id,name)=>{
+  const handleResetPin = async (id, name) => {
     await resetMemberPin(id);
     setMembers(prev=>prev.map(m=>m.id===id?{...m,pin:null}:m));
     toast(`PIN reset for ${name}`);
   };
 
-  const sel=selected?members.find(m=>m.id===selected):null;
-  const selTxns=sel?transactions.filter(t=>(t.memberId||t.member_id)===sel.id).slice(0,10):[];
-  const tier=sel?getTierFn(sel.points,tiers):null;
+  const handleArchive = async () => {
+    if (!sel) return;
+    setArchiving(true);
+    await updateMemberStatus(sel.id, "archived");
+    setMembers(prev => prev.map(m => m.id===sel.id ? {...m, status:"archived"} : m));
+    setArchiving(false);
+    setConfirmArchive(false);
+    setSelected(null);
+    toast(`${sel.name} archived`);
+  };
+
+  const handleRestore = async () => {
+    if (!sel) return;
+    setArchiving(true);
+    await updateMemberStatus(sel.id, "active");
+    setMembers(prev => prev.map(m => m.id===sel.id ? {...m, status:"active"} : m));
+    setArchiving(false);
+    setSelected(null);
+    toast(`${sel.name} restored`);
+  };
+
+  const sel = selected ? members.find(m=>m.id===selected) : null;
+  const selTxns = sel ? transactions.filter(t=>(t.memberId||t.member_id)===sel.id).slice(0,10) : [];
+  const tier = sel ? getTierFn(sel.points, tiers) : null;
 
   return(<div>
     <div className="search-row">
       <input className="search-input" placeholder="Search by name, phone or ID…" value={search} onChange={e=>setSearch(e.target.value)}/>
+      <button className={`btn ${showArchived?"btn-primary":"btn-ghost"}`} onClick={()=>setShowArchived(!showArchived)}>
+        {showArchived?"Showing Archived":`Archived (${archivedCount})`}
+      </button>
       {canAdd&&<button className="btn btn-primary" onClick={()=>setShowAdd(true)}>+ Add</button>}
     </div>
 
@@ -705,14 +729,17 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
       <table>
         <thead><tr><th>Member</th><th>ID</th><th>Phone</th><th>Tier</th><th>Points</th><th>Status</th><th></th></tr></thead>
         <tbody>{filtered.map(m=>{const t=getTierFn(m.points,tiers);return(
-          <tr key={m.id} className="clickable" onClick={()=>setSelected(m.id)}>
+          <tr key={m.id} className="clickable" onClick={()=>setSelected(m.id)} style={{opacity:m.status==="archived"?0.5:1}}>
             <td><div style={{display:"flex",alignItems:"center",gap:10}}><div className="av" style={{background:`${C.orange}22`,color:C.orange}}>{initials(m.name)}</div><div style={{fontWeight:600}}>{m.name}</div></div></td>
             <td className="mono" style={{color:C.muted}}>{m.id}</td>
             <td className="mono">{m.phone}</td>
             <td><span style={{color:t.color,fontWeight:700,fontSize:12}}>{t.icon} {t.name}</span></td>
             <td><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:C.orange}}>{m.points.toLocaleString()}</span></td>
             <td><span className={`badge badge-${m.status}`}>{m.status}</span></td>
-            <td onClick={e=>e.stopPropagation()}><div style={{display:"flex",gap:6}}><button className="btn btn-ghost btn-sm" onClick={()=>setSelected(m.id)}>View</button><button className="btn btn-ghost btn-sm" onClick={()=>onAward(m)}>Award</button></div></td>
+            <td onClick={e=>e.stopPropagation()}><div style={{display:"flex",gap:6}}>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setSelected(m.id)}>View</button>
+              {m.status!=="archived"&&<button className="btn btn-ghost btn-sm" onClick={()=>onAward(m)}>Award</button>}
+            </div></td>
           </tr>
         );})}</tbody>
       </table>
@@ -723,11 +750,13 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
       {filtered.map(m=>{
         const t=getTierFn(m.points,tiers);
         return(
-          <div key={m.id} className="member-card" onClick={()=>setSelected(m.id)}>
+          <div key={m.id} className="member-card" onClick={()=>setSelected(m.id)} style={{opacity:m.status==="archived"?0.5:1}}>
             <div className="av" style={{background:`${C.orange}22`,color:C.orange,width:40,height:40,fontSize:14}}>{initials(m.name)}</div>
             <div className="member-card-info">
               <div className="member-card-name">{m.name}</div>
-              <div className="member-card-sub" style={{color:t.color}}>{t.icon} {t.name} · {m.checkins} check-ins</div>
+              <div className="member-card-sub" style={{color:m.status==="archived"?C.muted:t.color}}>
+                {m.status==="archived"?"📦 Archived":`${t.icon} ${t.name}`} · {m.checkins} check-ins
+              </div>
             </div>
             <div className="member-card-pts">{m.points.toLocaleString()}</div>
           </div>
@@ -735,8 +764,9 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
       })}
     </div>
 
+    {/* Member detail modal */}
     {sel&&(
-      <Modal title={sel.name} onClose={()=>setSelected(null)}>
+      <Modal title={sel.name} onClose={()=>{setSelected(null);setConfirmArchive(false);}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:1,background:C.border,marginBottom:20}}>
           {[
             {v:sel.points.toLocaleString(),l:"Points"},
@@ -745,6 +775,11 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
             {v:sel.checkins,l:"Check-ins"}
           ].map((s,i)=>(<div key={i} className="ds-cell"><div className="ds-val">{s.v}</div><div className="ds-lbl">{s.l}</div></div>))}
         </div>
+        {sel.status==="archived"&&(
+          <div style={{background:"rgba(107,104,102,.12)",border:"1px solid #333435",padding:"10px 14px",marginBottom:16,fontSize:12,color:C.muted,fontWeight:700}}>
+            📦 This member is archived and hidden from the active roster.
+          </div>
+        )}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
           <div><label className="form-label">Phone</label><div className="mono">{sel.phone}</div></div>
           <div><label className="form-label">Tier</label><div style={{color:tier?.color,fontWeight:700}}>{tier?.icon} {tier?.name}</div></div>
@@ -762,11 +797,40 @@ function Members({members,setMembers,transactions,tiers,onAward,toast,role}){
             </div>
           ))}
         </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button className="btn btn-primary" onClick={()=>{setSelected(null);onAward(sel);}}>Award Points</button>
-          {canAdd&&<button className="btn btn-ghost" onClick={()=>toggleStatus(sel.id,sel.status)}>{sel.status==="active"?"Deactivate":"Activate"}</button>}
-          {role==="owner"&&<button className="btn btn-ghost" style={{borderColor:C.warning,color:C.warning}} onClick={()=>handleResetPin(sel.id,sel.name)}>Reset PIN</button>}
+
+        {/* Action buttons */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom: confirmArchive ? 14 : 0}}>
+          {sel.status!=="archived"&&<button className="btn btn-primary" onClick={()=>{setSelected(null);setConfirmArchive(false);onAward(sel);}}>Award Points</button>}
+          {sel.status!=="archived"&&canAdd&&<button className="btn btn-ghost" onClick={()=>toggleStatus(sel.id,sel.status)}>{sel.status==="active"?"Deactivate":"Activate"}</button>}
+          {role==="owner"&&sel.status!=="archived"&&<button className="btn btn-ghost" style={{borderColor:C.warning,color:C.warning}} onClick={()=>handleResetPin(sel.id,sel.name)}>Reset PIN</button>}
+
+          {canArchive && sel.status!=="archived" && (
+            <button className="btn btn-danger" onClick={()=>setConfirmArchive(true)}>Archive Member</button>
+          )}
+          {canArchive && sel.status==="archived" && (
+            <button className="btn btn-primary" onClick={handleRestore} disabled={archiving}>
+              {archiving?"Restoring…":"Restore Member"}
+            </button>
+          )}
         </div>
+
+        {/* Confirm archive */}
+        {confirmArchive && canArchive && (
+          <div style={{background:"rgba(239,68,68,.08)",border:"1px solid rgba(239,68,68,.3)",padding:"14px 16px",marginTop:12}}>
+            <div style={{fontSize:12,color:C.danger,fontWeight:700,marginBottom:6}}>
+              📦 Archive {sel.name}?
+            </div>
+            <div style={{fontSize:11,color:C.muted,marginBottom:12,lineHeight:1.6}}>
+              Archived members are hidden from the active roster, leaderboards, and TV display, but all their data — points, history, and profile — is preserved. You can restore them anytime from the "Archived" filter.
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setConfirmArchive(false)}>Cancel</button>
+              <button className="btn btn-danger btn-sm" onClick={handleArchive} disabled={archiving}>
+                {archiving?"Archiving…":"Yes, Archive"}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     )}
 
@@ -870,7 +934,6 @@ function Redemptions({redemptions,setRedemptions,setMembers,setTransactions,toas
     </div>
 
     {list.length===0 ? <div className="empty">No {tab} redemptions.</div> : (<>
-      {/* Desktop */}
       <div className="tbl-wrap">
         <table>
           <thead><tr><th>Member</th><th>Reward</th><th>Cost</th><th>Date</th><th>Status</th>{tab==="pending"&&<th>Actions</th>}</tr></thead>
@@ -889,7 +952,6 @@ function Redemptions({redemptions,setRedemptions,setMembers,setTransactions,toas
           ))}</tbody>
         </table>
       </div>
-      {/* Mobile cards */}
       <div className="member-list-mobile">
         {list.map(r=>(
           <div key={r.id} style={{background:C.surface,border:`1px solid ${C.border}`,padding:14,marginBottom:8}}>
@@ -998,7 +1060,6 @@ function StaffManagement({staffList,setStaffList,toast}){
   return(<div>
     <div className="sec-hdr"><div className="sec-title">Staff ({staffList.length})</div><button className="btn btn-primary" onClick={()=>setShowAdd(true)}>+ Add</button></div>
 
-    {/* Desktop */}
     <div className="tbl-wrap">
       <table>
         <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1016,7 +1077,6 @@ function StaffManagement({staffList,setStaffList,toast}){
       </table>
     </div>
 
-    {/* Mobile */}
     <div className="member-list-mobile">
       {staffList.map(s=>{const r=ROLES[s.role];return(
         <div key={s.id} style={{background:C.surface,border:`1px solid ${C.border}`,padding:14,marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
